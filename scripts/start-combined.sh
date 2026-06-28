@@ -15,8 +15,10 @@ export KC_DB_URL="jdbc:postgresql://${DB_HOST_PORT_DB}/${DB_NAME}?prepareThresho
 export KC_DB_USERNAME="$DB_USER"
 export KC_DB_PASSWORD="$DB_PASS"
 
-# Configure Keycloak to trust X-Forwarded headers from Nginx reverse proxy
-export KC_PROXY=edge
+# Configure Keycloak to trust X-Forwarded-Proto/Host headers from Nginx reverse proxy.
+# KC_PROXY=edge is deprecated in Keycloak 25+; replaced by KC_PROXY_HEADERS=xforwarded.
+export KC_PROXY_HEADERS=xforwarded
+export KC_HOSTNAME=https://iitdeveloper-iam.hf.space
 export KC_HOSTNAME_STRICT=false
 export KC_HTTP_ENABLED=true
 
