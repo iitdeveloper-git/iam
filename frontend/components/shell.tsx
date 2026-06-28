@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type React from "react";
 import { Activity, AppWindow, FileClock, KeyRound, LayoutDashboard, Shield, UserRound } from "lucide-react";
+import { AuthTokenPanel } from "@/components/auth-token-panel";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -33,7 +34,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </nav>
       </aside>
       <main className="md:pl-64">
-        <div className="mx-auto max-w-7xl px-5 py-6">{children}</div>
+        <div className="mx-auto max-w-7xl px-5 py-6">
+          <AuthTokenPanel />
+          {children}
+        </div>
       </main>
     </div>
   );

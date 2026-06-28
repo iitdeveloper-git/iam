@@ -10,6 +10,9 @@ Implemented:
 - Invitation token hashing.
 - Secret-reference model for service accounts.
 - Frontend dependency audit currently reports 0 vulnerabilities.
+- Production configuration validation rejects dev auth, UAT fallback, missing JWKS URL, insecure cookies, wildcard CORS, HTTP production redirect URLs, placeholder Keycloak admin secrets, and unsafe JWT algorithms.
+- Signed JWT tests cover valid token, wrong issuer, wrong audience and expired token.
+- Keycloak admin client normalizes admin request errors.
 
 Not yet verified:
 
@@ -19,3 +22,5 @@ Not yet verified:
 - Secret manager integration.
 - E2E security tests and scans.
 - Live Compose dependency health.
+- Live Keycloak token verification.
+- Live Keycloak admin operations.

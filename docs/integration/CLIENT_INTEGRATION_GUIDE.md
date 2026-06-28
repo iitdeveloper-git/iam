@@ -221,3 +221,41 @@ Secrets must be stored in the consuming service secret manager.
 - [ ] Logout flow is implemented.
 - [ ] Token refresh strategy is documented.
 
+## Admin Console on Netlify
+
+The admin console is a TypeScript Next.js application and can deploy on Netlify's free tier.
+
+Configure these Netlify environment variables:
+
+```text
+AUTH_SECRET
+AUTH_URL
+AUTH_IITD_ISSUER
+AUTH_IITD_CLIENT_ID
+AUTH_IITD_CLIENT_SECRET
+NEXT_PUBLIC_IAM_API_URL
+```
+
+Register this callback URI in Keycloak/IAM:
+
+```text
+https://your-netlify-site.netlify.app/api/auth/callback/iitd-iam
+```
+
+Fallback deployable bridge mode:
+
+1. Configure `NEXT_PUBLIC_IAM_API_URL` in Netlify to the Hugging Face API base URL, for example:
+
+   ```text
+   https://iitdeveloper-iam.hf.space/api/v1
+   ```
+
+2. Obtain an OIDC access token from the configured Keycloak realm.
+3. Paste the access token into the admin console session panel.
+4. The UI sends API calls with:
+
+   ```text
+   Authorization: Bearer <access-token>
+   ```
+
+This fallback is useful for UAT while OIDC client secrets and callback URLs are being configured.
