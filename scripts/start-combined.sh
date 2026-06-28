@@ -1,35 +1,217 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -Eeuo pipefail
 
-# Parse PostgreSQL connection string components: postgresql://user:password@host:port/database
-# We extract username, password, host, port and database separately to construct a clean JDBC URL.
-DB_USER=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://([^:]+):.*|\1|')
-DB_PASS=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://[^:]+:([^@]+)@.*|\1|')
-DB_HOST_PORT_DB=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://[^@]+@([^/]+)/?.*|\1|')
-DB_NAME=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://[^@]+@[^/]+/([^?]+).*|\1|')
+KEYCLOAK_PID=""
+API_PID=""
+NGINX_PID=""
+
+cleanup() {
+echo "Stopping IAM services..."
+
+for pid in "$NGINX_PID" "$API_PID" "$KEYCLOAK_PID"; do
+if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+kill "$pid" 2>/dev/null || true
+fi
+done
+
+wait 2>/dev/null || true
+}
+
+trap cleanup EXIT INT TERM
+
+require_env() {
+local name="$1"
+
+if [[ -z "${!name:-}" ]]; then
+echo "Required environment variable is missing: $name" >&2
+exit 1
+fi
+}
+
+require_env IAM_DATABASE_URL
+require_env IAM_REDIS_URL
+require_env IAM_OIDC_ISSUER
+require_env IAM_OIDC_JWKS_URL
+
+echo "Parsing PostgreSQL configuration..."
+
+mapfile -t DB_PARTS < <(
+python - <<'PY'
+import os
+from urllib.parse import unquote, urlparse
+
+database_url = os.environ["IAM_DATABASE_URL"]
+
+for prefix in (
+"postgresql+asyncpg://",
+"postgresql+psycopg://",
+"postgresql+psycopg2://",
+):
+if database_url.startswith(prefix):
+database_url = database_url.replace(prefix, "postgresql://", 1)
+break
+
+parsed = urlparse(database_url)
+
+if not parsed.hostname:
+raise SystemExit("IAM_DATABASE_URL does not contain a valid hostname")
+
+print(unquote(parsed.username or ""))
+print(unquote(parsed.password or ""))
+print(parsed.hostname)
+print(parsed.port or 5432)
+print(unquote((parsed.path or "").lstrip("/")))
+PY
+)
+
+DB_USER="${DB_PARTS[0]:-}"
+DB_PASS="${DB_PARTS[1]:-}"
+DB_HOST="${DB_PARTS[2]:-}"
+DB_PORT="${DB_PARTS[3]:-5432}"
+DB_NAME="${DB_PARTS[4]:-}"
+
+if [[ -z "$DB_USER" || -z "$DB_HOST" || -z "$DB_NAME" ]]; then
+echo "Could not parse IAM_DATABASE_URL" >&2
+exit 1
+fi
+
+echo "Database configuration parsed successfully."
+echo "Database host: ${DB_HOST}:${DB_PORT}"
+echo "Database name: ${DB_NAME}"
+
+# Never print DB_PASS.
 
 echo "Starting Keycloak on port 8080..."
+
 export KC_DB=postgres
-# Disable prepared statements completely in JDBC connection string to support transaction pooling (e.g. Supabase connection pooler)
-export KC_DB_URL="jdbc:postgresql://${DB_HOST_PORT_DB}/${DB_NAME}?prepareThreshold=0"
+export KC_DB_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?prepareThreshold=0"
 export KC_DB_USERNAME="$DB_USER"
 export KC_DB_PASSWORD="$DB_PASS"
 
-# Configure Keycloak to trust X-Forwarded-Proto/Host headers from Nginx reverse proxy.
-# KC_PROXY=edge is deprecated in Keycloak 25+; replaced by KC_PROXY_HEADERS=xforwarded.
-export KC_PROXY_HEADERS=xforwarded
-export KC_HOSTNAME=https://iitdeveloper-iam.hf.space
-export KC_HOSTNAME_STRICT=false
-export KC_HTTP_ENABLED=true
+# Recommended when IAM and Keycloak share one PostgreSQL database.
 
-/opt/keycloak/bin/kc.sh start-dev --http-port=8080 --import-realm &
+# The schema should exist and the database user must have permission to use it.
+
+export KC_DB_SCHEMA="${KC_DB_SCHEMA:-keycloak}"
+
+export KC_PROXY_HEADERS=xforwarded
+export KC_HOSTNAME="${KC_HOSTNAME:-https://iitdeveloper-iam.hf.space}"
+export KC_HOSTNAME_STRICT="${KC_HOSTNAME_STRICT:-false}"
+export KC_HTTP_ENABLED=true
+export KC_HTTP_PORT=8080
+
+/opt/keycloak/bin/kc.sh start 
+--http-port=8080 
+--import-realm &
+
+KEYCLOAK_PID=$!
+
+echo "Waiting for Keycloak..."
+
+KEYCLOAK_READY=false
+
+for attempt in $(seq 1 90); do
+if ! kill -0 "$KEYCLOAK_PID" 2>/dev/null; then
+echo "Keycloak exited during startup." >&2
+wait "$KEYCLOAK_PID" || true
+exit 1
+fi
+
+if curl 
+--fail 
+--silent 
+--show-error 
+--max-time 5 
+"http://127.0.0.1:8080/realms/iitd/.well-known/openid-configuration" 
+>/dev/null; then
+KEYCLOAK_READY=true
+echo "Keycloak is ready."
+break
+fi
+
+echo "Keycloak is not ready yet (${attempt}/90)..."
+sleep 2
+done
+
+if [[ "$KEYCLOAK_READY" != "true" ]]; then
+echo "Keycloak did not become ready within the expected time." >&2
+exit 1
+fi
+
+echo "Applying IAM database migrations..."
+
+alembic upgrade head
+
+echo "IAM database migrations completed."
 
 echo "Starting FastAPI on port 8000..."
-export IAM_DATABASE_URL="${IAM_DATABASE_URL}"
+
 export IAM_KEYCLOAK_BASE_URL="http://127.0.0.1:8080"
 export IAM_OIDC_ISSUER="${IAM_OIDC_ISSUER:-https://iitdeveloper-iam.hf.space/realms/iitd}"
 
-uvicorn iitd_iam.main:app --host 0.0.0.0 --port 8000 &
+uvicorn iitd_iam.main:app 
+--host 127.0.0.1 
+--port 8000 
+--proxy-headers 
+--forwarded-allow-ips="127.0.0.1" &
 
-echo "Starting Nginx Reverse Proxy on port 7860..."
-nginx -g "daemon off;"
+API_PID=$!
+
+echo "Waiting for FastAPI..."
+
+API_READY=false
+
+for attempt in $(seq 1 60); do
+if ! kill -0 "$API_PID" 2>/dev/null; then
+echo "FastAPI exited during startup." >&2
+wait "$API_PID" || true
+exit 1
+fi
+
+if curl 
+--fail 
+--silent 
+--show-error 
+--max-time 5 
+"http://127.0.0.1:8000/health/live" 
+>/dev/null; then
+API_READY=true
+echo "FastAPI is ready."
+break
+fi
+
+echo "FastAPI is not ready yet (${attempt}/60)..."
+sleep 1
+done
+
+if [[ "$API_READY" != "true" ]]; then
+echo "FastAPI did not become ready within the expected time." >&2
+exit 1
+fi
+
+echo "Starting Nginx reverse proxy on port 7860..."
+
+nginx -g "daemon off;" &
+
+NGINX_PID=$!
+
+sleep 2
+
+if ! kill -0 "$NGINX_PID" 2>/dev/null; then
+echo "Nginx failed to start." >&2
+wait "$NGINX_PID" || true
+exit 1
+fi
+
+echo "All IAM services started successfully."
+echo "Public endpoint: https://iitdeveloper-iam.hf.space"
+
+# Exit the container when any critical process exits.
+
+set +e
+wait -n "$KEYCLOAK_PID" "$API_PID" "$NGINX_PID"
+EXIT_CODE=$?
+set -e
+
+echo "A critical IAM process exited with code ${EXIT_CODE}." >&2
+exit "$EXIT_CODE"
