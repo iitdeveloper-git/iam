@@ -1,0 +1,75 @@
+name: deploy-backend-huggingface
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "Dockerfile.api"
+      - ".github/workflows/deploy-backend-huggingface.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HF_SPACE_ID: ${{ vars.HF_SPACE_ID || secrets.HF_SPACE_ID || 'iitdeveloper/iam' }}
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Hugging Face settings
+        run: |
+          test -n "$HF_TOKEN" || (echo "Missing GitHub secret HF_TOKEN" && exit 1)
+          test -n "$HF_SPACE_ID" || (echo "Missing Hugging Face Space ID" && exit 1)
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build Space bundle
+        run: |
+          rm -rf /tmp/iitd-iam-hf-space
+          mkdir -p /tmp/iitd-iam-hf-space
+          cp -R backend /tmp/iitd-iam-hf-space/backend
+          cp Dockerfile.api /tmp/iitd-iam-hf-space/Dockerfile
+          cat > /tmp/iitd-iam-hf-space/README.md <<'EOF'
+          ---
+          title: IITD IAM API
+          sdk: docker
+          app_port: 7860
+          ---
+
+          IITD IAM FastAPI backend deployed as a Hugging Face Docker Space.
+
+          Required Space secrets:
+
+          - IAM_DATABASE_URL
+          - IAM_REDIS_URL
+          - IAM_KEYCLOAK_BASE_URL
+          - IAM_OIDC_ISSUER
+          - IAM_OIDC_AUDIENCE
+          EOF
+
+      - name: Upload backend to Hugging Face Space
+        run: |
+          python -m pip install --upgrade huggingface_hub
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi, upload_folder
+
+          token = os.environ["HF_TOKEN"]
+          repo_id = os.environ["HF_SPACE_ID"]
+          api = HfApi(token=token)
+          api.create_repo(repo_id=repo_id, repo_type="space", space_sdk="docker", exist_ok=True)
+          upload_folder(
+              repo_id=repo_id,
+              repo_type="space",
+              folder_path="/tmp/iitd-iam-hf-space",
+              token=token,
+              commit_message="Deploy IITD IAM API from GitHub Actions",
+          )
+          PY

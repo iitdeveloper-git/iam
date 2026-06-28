@@ -1,0 +1,28 @@
+body {
+  background: #f6f8fa;
+  color: #172026;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.iitd-login-brand {
+  margin-bottom: 24px;
+}
+
+.iitd-logo {
+  color: #0f766e;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+input,
+button {
+  border-radius: 6px;
+}
+
+button,
+input[type="submit"] {
+  background: #0f766e;
+  border: 0;
+  color: white;
+}
+

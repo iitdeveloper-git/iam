@@ -1,0 +1,41 @@
+[project]
+name = "iitd-iam-api"
+version = "0.1.0"
+description = "IITD IAM management API backed by Keycloak, PostgreSQL and Redis"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic>=1.13",
+  "asyncpg>=0.29",
+  "fastapi>=0.111",
+  "httpx>=0.27",
+  "prometheus-client>=0.20",
+  "pydantic-settings>=2.3",
+  "pydantic>=2.7",
+  "python-jose[cryptography]>=3.3",
+  "redis>=5.0",
+  "sqlalchemy[asyncio]>=2.0",
+  "structlog>=24.1",
+  "uvicorn[standard]>=0.30",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "ruff>=0.5",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"

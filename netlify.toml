@@ -1,0 +1,12 @@
+[build]
+base = "frontend"
+command = "npm ci && npm run build"
+publish = ".next"
+
+[build.environment]
+NEXT_TELEMETRY_DISABLED = "1"
+NEXT_PUBLIC_IAM_API_URL = "https://YOUR_HUGGING_FACE_SPACE_URL/api/v1"
+
+[[plugins]]
+package = "@netlify/plugin-nextjs"
+

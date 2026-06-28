@@ -1,0 +1,32 @@
+{
+  "realm": "iitd",
+  "enabled": true,
+  "displayName": "IITD IAM",
+  "loginTheme": "iitd",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "verifyEmail": true,
+  "bruteForceProtected": true,
+  "clients": [
+    {
+      "clientId": "iitd-iam-admin",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["http://localhost:3030/*"],
+      "webOrigins": ["http://localhost:3030"]
+    }
+  ],
+  "roles": {
+    "realm": [
+      { "name": "super_admin" },
+      { "name": "platform_admin" },
+      { "name": "security_admin" },
+      { "name": "application_admin" },
+      { "name": "support_operator" },
+      { "name": "auditor" },
+      { "name": "user" }
+    ]
+  }
+}

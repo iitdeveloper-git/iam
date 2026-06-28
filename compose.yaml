@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: iam
+      POSTGRES_USER: iam
+      POSTGRES_PASSWORD: ${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - iam-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iam -d iam"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - keycloak-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - iam-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./docker/keycloak/realm-iitd.json:/opt/keycloak/data/import/realm-iitd.json:ro
+      - ./keycloak/themes/iitd:/opt/keycloak/themes/iitd:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
+  iam-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    environment:
+      IAM_DATABASE_URL: postgresql://iam:${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}@postgres:5432/iam
+      IAM_REDIS_URL: redis://redis:6379/0
+      IAM_KEYCLOAK_BASE_URL: http://keycloak:8080
+      IAM_OIDC_ISSUER: http://keycloak:8080/realms/iitd
+      IAM_ALLOW_DEV_AUTH: "true"
+      PORT: "8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: ["alembic", "upgrade", "head"]
+    working_dir: /app
+    environment:
+      IAM_DATABASE_URL: postgresql://iam:${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}@postgres:5432/iam
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
+  iam-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+    environment:
+      NEXT_PUBLIC_IAM_API_URL: http://localhost:8000/api/v1
+      PORT: "3030"
+    ports:
+      - "3030:3030"
+    depends_on:
+      - iam-api
+
+volumes:
+  iam-postgres:
+  keycloak-postgres:
+  iam-redis:
