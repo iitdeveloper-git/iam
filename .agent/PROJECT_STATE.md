@@ -18,6 +18,8 @@ Completed work:
 - Podman-compatible Compose stack added for PostgreSQL, Redis, Keycloak, IAM API, migrations and admin UI.
 - Keycloak development realm and theme added.
 - CI workflow added.
+- Client integration documentation added for generic clients, FastAPI, Next.js, React SPA, machine-to-machine clients and GNS.
+- API matrix added with honest implementation status.
 
 Incomplete work:
 
@@ -43,10 +45,10 @@ Migrations: `backend/alembic/versions/0001_initial_schema.py`.
 
 Running services: not started by this session.
 
-Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities.
+Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. After integration docs/examples, Python compile and backend unit tests still pass.
 
 Security status: foundation controls implemented; production verification incomplete.
 
 Deployment status: local Compose artifacts ready; staging/production blocked by external infrastructure.
 
-Next exact action: implement full Keycloak admin client operations and replace local dev header flow with OIDC session verification for the admin console.
+Next exact action: push local commits after GitHub authentication, then implement full Keycloak admin client operations and replace local dev header flow with OIDC session verification for the admin console.

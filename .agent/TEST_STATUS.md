@@ -16,6 +16,8 @@ Actual result:
 - `npm run typecheck`: passed.
 - `npm run build`: passed with escalated sandbox permissions because Next 16 Turbopack workers require local process/port capabilities blocked by the default sandbox.
 - `npm audit --audit-level=moderate`: passed, 0 vulnerabilities after upgrading to Next 16.2.9 and overriding PostCSS to the patched range.
+- After adding integration docs/examples, `python3 -m compileall -q backend/src backend/tests examples/fastapi examples/service-client` passed.
+- After adding integration docs/examples, `pytest backend/tests` passed: 4 passed.
 
 Not executed:
 

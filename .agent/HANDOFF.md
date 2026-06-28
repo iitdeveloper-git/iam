@@ -9,6 +9,7 @@ Verified complete:
 - Security-sensitive local rules have tests.
 - Backend syntax compile, unit tests and Ruff checks passed.
 - Frontend typecheck, production build and npm audit passed.
+- Integration docs and examples now explain how clients use IAM from their own app/server.
 
 Pending verification:
 
@@ -18,9 +19,8 @@ Pending verification:
 Next action:
 
 ```bash
-podman compose up -d postgres redis keycloak
-podman compose --profile tools run --rm migrate
-podman compose up -d
+gh auth login
+git push -u origin main
 ```
 
 Known limitations:

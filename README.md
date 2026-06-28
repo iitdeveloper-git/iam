@@ -40,6 +40,19 @@ npm audit --audit-level=moderate
 
 `next build` may require broader local process permissions in restricted sandboxes because Next 16 uses Turbopack workers.
 
+## How Client Apps Use IITD IAM
+
+Client applications integrate through OpenID Connect, not by calling private Keycloak admin APIs.
+
+Start with:
+
+- [Client Integration Guide](/Users/ravi/Documents/projects/ett/iam/docs/integration/CLIENT_INTEGRATION_GUIDE.md)
+- [FastAPI Client](/Users/ravi/Documents/projects/ett/iam/docs/integration/FASTAPI_CLIENT.md)
+- [Next.js Client](/Users/ravi/Documents/projects/ett/iam/docs/integration/NEXTJS_CLIENT.md)
+- [React SPA Client](/Users/ravi/Documents/projects/ett/iam/docs/integration/REACT_SPA_CLIENT.md)
+- [Machine-to-Machine](/Users/ravi/Documents/projects/ett/iam/docs/integration/MACHINE_TO_MACHINE.md)
+- [GNS Integration](/Users/ravi/Documents/projects/ett/iam/docs/integration/GNS_INTEGRATION.md)
+
 ## GitHub Deployments
 
 Backend deploys to Hugging Face with `.github/workflows/deploy-backend-huggingface.yaml`.
