@@ -1,18 +1,22 @@
 #!/bin/bash
 set -e
 
+# Extract username from IAM_DATABASE_URL to pass to Keycloak
+# Format: postgresql://username:password@host:port/database
+DB_USER=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://([^:]+):.*|\1|')
+
 echo "Starting Keycloak on port 8080..."
-# JDBC DB URL from env
 export KC_DB=postgres
-export KC_DB_URL="jdbc:postgresql://${DB_HOST:-aws-1-ap-southeast-1.pooler.supabase.com}:${DB_PORT:-6543}/${DB_NAME:-postgres}"
-export KC_DB_USERNAME="${DB_USERNAME}"
-export KC_DB_PASSWORD="${DB_PASSWORD}"
+# Convert postgresql:// connection URL to jdbc:postgresql:// format
+JDBC_URL=$(echo "$IAM_DATABASE_URL" | sed 's|^postgresql://|jdbc:postgresql://|')
+export KC_DB_URL="$JDBC_URL"
+export KC_DB_USERNAME="$DB_USER"
+export KC_DB_PASSWORD="${KEYCLOAK_DB_PASSWORD}"
 
 /opt/keycloak/bin/kc.sh start-dev --http-port=8080 --import-realm &
 
 echo "Starting FastAPI on port 8000..."
-# Set FastAPI database URL using standard Postgres scheme
-export IAM_DATABASE_URL="postgresql://${DB_USERNAME}:${DB_PASSWORD}@${DB_HOST:-aws-1-ap-southeast-1.pooler.supabase.com}:${DB_PORT:-6543}/${DB_NAME:-postgres}"
+export IAM_DATABASE_URL="${IAM_DATABASE_URL}"
 export IAM_KEYCLOAK_BASE_URL="http://127.0.0.1:8080"
 export IAM_OIDC_ISSUER="${IAM_OIDC_ISSUER:-https://iitdeveloper-iam.hf.space/realms/iitd}"
 
