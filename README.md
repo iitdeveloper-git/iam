@@ -1,3 +1,12 @@
+---
+title: IITD IAM
+emoji: 🔐
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+---
+
 # IITD IAM
 
 IITD IAM is a central identity and access management platform for IITDEVELOPER products. This repository contains the V1 foundation: a FastAPI management API, PostgreSQL schema and migrations, Redis/Keycloak local runtime, a Next.js admin console, a Keycloak theme, documentation, CI, and resumable agent state.
