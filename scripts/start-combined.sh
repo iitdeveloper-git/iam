@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# Extract username from IAM_DATABASE_URL to pass to Keycloak
-# Format: postgresql://username:password@host:port/database
+# Parse PostgreSQL connection string components: postgresql://user:password@host:port/database
+# We extract username, host, port and database separately to construct a clean JDBC URL.
 DB_USER=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://([^:]+):.*|\1|')
+DB_HOST_PORT_DB=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://[^@]+@([^/]+)/?.*|\1|')
+DB_NAME=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://[^@]+@[^/]+/([^?]+).*|\1|')
 
 echo "Starting Keycloak on port 8080..."
 export KC_DB=postgres
-# Convert postgresql:// connection URL to jdbc:postgresql:// format
-JDBC_URL=$(echo "$IAM_DATABASE_URL" | sed 's|^postgresql://|jdbc:postgresql://|')
-export KC_DB_URL="$JDBC_URL"
+export KC_DB_URL="jdbc:postgresql://${DB_HOST_PORT_DB}/${DB_NAME}"
 export KC_DB_USERNAME="$DB_USER"
 export KC_DB_PASSWORD="${KEYCLOAK_DB_PASSWORD}"
 
