@@ -44,7 +44,6 @@ require_env KC_DB_USERNAME
 require_env KC_DB_PASSWORD
 
 export KC_DB="${KC_DB:-postgres}"
-export KC_DB_SCHEMA="${KC_DB_SCHEMA:-keycloak}"
 
 export KC_HTTP_ENABLED="${KC_HTTP_ENABLED:-true}"
 export KC_HTTP_PORT="${KC_HTTP_PORT:-8080}"
