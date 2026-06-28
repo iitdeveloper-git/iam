@@ -32,15 +32,43 @@ Status: DONE
 
 Description: Complete Keycloak admin integration.
 
-Acceptance criteria: user/client/role/session/idp operations use typed Keycloak adapters with safe errors, token caching and no credential logging.
+Acceptance criteria: user/client/role/session/idp operations use typed Keycloak adapters with safe errors, token caching and no credential logging; methods are wired into IAM services with consistency tracking and live-tested.
 
 Dependencies: IAM-002.
 
 Files: `backend/src/iitd_iam/integrations/keycloak/`.
 
-Tests: unit and integration tests with mock Keycloak.
+Tests: unit tests with mock Keycloak, integration tests with live Keycloak.
 
 Status: IN_PROGRESS
+
+## IAM-005
+
+Description: Production configuration validation.
+
+Acceptance criteria: production rejects missing JWKS URL, dev auth, UAT fallback, debug mode, insecure cookies, wildcard CORS, HTTP production redirect URLs, placeholder admin secrets and unsafe JWT algorithms.
+
+Dependencies: IAM-002.
+
+Files: `backend/src/iitd_iam/config.py`, `backend/tests/test_production_config.py`, `docs/operations/PRODUCTION_CONFIGURATION.md`.
+
+Tests: `pytest backend/tests/test_production_config.py`.
+
+Status: DONE
+
+## IAM-006
+
+Description: Distributed consistency and provisioning operation persistence.
+
+Acceptance criteria: IAM records provisioning operations with idempotency keys, retryable status, external resource IDs, redacted failure reasons and reconciliation hooks.
+
+Dependencies: IAM-003.
+
+Files: backend models, migration, services, tests, consistency docs.
+
+Tests: unit and integration tests for success, failure, duplicate idempotency and retry state.
+
+Status: TODO
 
 ## IAM-004
 

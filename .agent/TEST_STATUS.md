@@ -22,6 +22,9 @@ Actual result:
 - After bearer-token and Netlify UI changes, `ruff check backend/src backend/tests` passed.
 - After bearer-token and Netlify UI changes, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
 - After Auth.js OIDC UI changes, `npm run typecheck`, `npm run build`, `npm audit --audit-level=moderate`, and `pytest backend/tests` passed.
+- After production-config and Keycloak-admin-client work, `pytest backend/tests` passed: 26 passed.
+- After production-config and Keycloak-admin-client work, `ruff check backend/src backend/tests` passed.
+- After production-config work, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
 
 Not executed:
 

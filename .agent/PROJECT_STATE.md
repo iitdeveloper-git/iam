@@ -24,10 +24,14 @@ Completed work:
 - Readiness now checks PostgreSQL, Redis and Keycloak discovery.
 - Netlify UI no longer depends on development headers and sends `Authorization: Bearer` tokens from a browser session.
 - Netlify UI now includes Auth.js OIDC sign-in route for Keycloak/IITD IAM.
+- Production configuration validation and tests added.
+- Keycloak admin client typed methods and tests added.
+- Consistency and reconciliation strategy documented.
 
 Incomplete work:
 
 - Full Keycloak admin operations.
+- Keycloak admin methods are not yet wired into IAM business services/routes or live-tested.
 - Live validation of automatic OIDC sign-in in admin UI against Netlify and Keycloak callback settings.
 - Complete CRUD endpoints for every specified action.
 - Email/GNS integration.
@@ -49,10 +53,10 @@ Migrations: `backend/alembic/versions/0001_initial_schema.py`.
 
 Running services: not started by this session.
 
-Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 6 passed. Latest frontend build includes `ƒ /api/auth/[...nextauth]`.
+Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 26 passed. Latest frontend build includes `ƒ /api/auth/[...nextauth]`.
 
 Security status: foundation controls implemented; production verification incomplete.
 
 Deployment status: local Compose artifacts ready; staging/production blocked by external infrastructure.
 
-Next exact action: configure Netlify `AUTH_*` variables and Keycloak callback URL, then live-test `/api/auth/signin/iitd-iam`.
+Next exact action: implement provisioning operation persistence/idempotency and wire Keycloak admin client into OAuth client lifecycle services.

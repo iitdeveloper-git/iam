@@ -3,6 +3,14 @@
 - [ ] Replace all development secrets.
 - [ ] Enforce HTTPS.
 - [ ] Enable secure, HttpOnly, SameSite cookies.
+- [ ] Set `IAM_ENVIRONMENT=production`.
+- [ ] Set `IAM_OIDC_JWKS_URL`.
+- [ ] Set `IAM_ALLOW_DEV_AUTH=false`.
+- [ ] Set `IAM_ALLOW_UAT_BEARER_TOKEN_FALLBACK=false`.
+- [ ] Set `NEXT_PUBLIC_ENABLE_UAT_TOKEN_FALLBACK=false`.
+- [ ] Reject wildcard CORS.
+- [ ] Reject HTTP production redirect URLs.
+- [ ] Verify production configuration validation tests pass.
 - [ ] Require MFA for administrators.
 - [ ] Disable default accounts.
 - [ ] Restrict Keycloak admin console.
@@ -20,4 +28,3 @@
 - [ ] Configure audit retention.
 - [ ] Document signing-key rotation.
 - [ ] Document incident contacts.
-

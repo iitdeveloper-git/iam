@@ -33,7 +33,7 @@ async def current_principal(
         normalized = normalize_jwt_error(exc)
         raise ApiError("TOKEN_INVALID", "The access token could not be verified.", status_code=401, details=[str(normalized)]) from exc
 
-    roles, permissions = extract_roles_and_permissions(claims)
+    roles, permissions = extract_roles_and_permissions(claims, resource_client_id="iitd-iam-admin")
     return CurrentPrincipal(
         subject=claims["sub"],
         issuer=claims["iss"],
@@ -50,3 +50,15 @@ def require_permission(permission: str):
         raise ApiError("PERMISSION_DENIED", "The principal lacks the required permission.", status_code=403)
 
     return dependency
+
+
+from collections.abc import AsyncGenerator
+from iitd_iam.integrations.keycloak.client import KeycloakHttpClient
+
+async def get_keycloak_client() -> AsyncGenerator[KeycloakHttpClient, None]:
+    settings = get_settings()
+    client = KeycloakHttpClient(settings)
+    try:
+        yield client
+    finally:
+        await client.close()

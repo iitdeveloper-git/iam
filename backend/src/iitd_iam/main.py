@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
@@ -17,6 +17,23 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(title="IITD IAM API", version="0.1.0", openapi_url="/api/openapi.json")
     app.add_exception_handler(ApiError, api_error_handler)
+    
+    from fastapi.exceptions import RequestValidationError
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        details = []
+        for err in exc.errors():
+            loc = " -> ".join(str(l) for l in err.get("loc", []))
+            msg = err.get("msg", "invalid value")
+            details.append(f"{loc}: {msg}")
+        api_error = ApiError(
+            "VALIDATION_ERROR",
+            "The request payload failed validation.",
+            status_code=422,
+            details=details
+        )
+        return await api_error_handler(request, api_error)
+
     app.middleware("http")(request_id_middleware)
     app.add_middleware(
         CORSMiddleware,
@@ -47,7 +64,8 @@ def create_app() -> FastAPI:
         except Exception:
             checks["redis"] = "failed"
         try:
-            discovery = f"{str(settings.oidc_issuer).rstrip('/')}/.well-known/openid-configuration"
+            issuer_path = settings.oidc_issuer.path or ""
+            discovery = f"{str(settings.keycloak_base_url).rstrip('/')}{issuer_path}/.well-known/openid-configuration"
             async with httpx.AsyncClient(timeout=5.0) as client:
                 response = await client.get(discovery)
                 response.raise_for_status()

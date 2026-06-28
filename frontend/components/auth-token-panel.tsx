@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { signIn } from "next-auth/react";
 import { KeyRound, LogIn, LogOut, RefreshCw, Save } from "lucide-react";
 import { clearStoredAccessToken, getMe, getStoredAccessToken, setStoredAccessToken } from "@/lib/api/client";
 
@@ -13,6 +14,7 @@ type AuthSession = {
 };
 
 export function AuthTokenPanel() {
+  const allowTokenFallback = process.env.NEXT_PUBLIC_ENABLE_UAT_TOKEN_FALLBACK !== "false";
   const [token, setToken] = useState("");
   const [status, setStatus] = useState("No access token configured");
   const [principal, setPrincipal] = useState<string | null>(null);
@@ -74,10 +76,10 @@ export function AuthTokenPanel() {
         IAM API Session
       </div>
       <div className="mb-3 flex flex-wrap gap-2">
-        <a className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-white" href="/api/auth/signin/iitd-iam">
+        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-white" type="button" onClick={() => signIn("iitd-iam")}>
           <LogIn className="h-4 w-4" />
           Sign in
-        </a>
+        </button>
         <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line px-4 text-sm font-medium text-slate-700" type="button" onClick={useSignedInSession}>
           <RefreshCw className="h-4 w-4" />
           Use session
@@ -87,24 +89,26 @@ export function AuthTokenPanel() {
           Sign out
         </a>
       </div>
-      <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
-        <input
-          className="min-h-10 rounded-md border border-line px-3 text-sm outline-none focus:border-brand"
-          type="password"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
-          placeholder="Paste an OIDC access token from IITD IAM / Keycloak"
-          aria-label="OIDC access token"
-        />
-        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-white" type="button" onClick={saveToken}>
-          <Save className="h-4 w-4" />
-          Save
-        </button>
-        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line px-4 text-sm font-medium text-slate-700" type="button" onClick={clearToken}>
-          <LogOut className="h-4 w-4" />
-          Clear
-        </button>
-      </div>
+      {allowTokenFallback ? (
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
+          <input
+            className="min-h-10 rounded-md border border-line px-3 text-sm outline-none focus:border-brand"
+            type="password"
+            value={token}
+            onChange={(event) => setToken(event.target.value)}
+            placeholder="Paste an OIDC access token from IITD IAM / Keycloak"
+            aria-label="OIDC access token"
+          />
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-white" type="button" onClick={saveToken}>
+            <Save className="h-4 w-4" />
+            Save
+          </button>
+          <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line px-4 text-sm font-medium text-slate-700" type="button" onClick={clearToken}>
+            <LogOut className="h-4 w-4" />
+            Clear
+          </button>
+        </div>
+      ) : null}
       <div className="mt-3 text-sm text-slate-600">
         {status}
         {principal ? <span className="ml-2 text-slate-400">as {principal}</span> : null}

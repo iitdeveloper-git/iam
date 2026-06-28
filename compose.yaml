@@ -52,6 +52,8 @@ services:
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: http://localhost:8080
+      KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
     ports:
       - "8080:8080"
     volumes:
@@ -69,7 +71,8 @@ services:
       IAM_DATABASE_URL: postgresql://iam:${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}@postgres:5432/iam
       IAM_REDIS_URL: redis://redis:6379/0
       IAM_KEYCLOAK_BASE_URL: http://keycloak:8080
-      IAM_OIDC_ISSUER: http://keycloak:8080/realms/iitd
+      IAM_OIDC_ISSUER: http://localhost:8080/realms/iitd-iam-admin
+      IAM_OIDC_JWKS_URL: http://keycloak:8080/realms/iitd-iam-admin/protocol/openid-connect/certs
       IAM_ALLOW_DEV_AUTH: "true"
       PORT: "8000"
     ports:
@@ -102,6 +105,13 @@ services:
     environment:
       NEXT_PUBLIC_IAM_API_URL: http://localhost:8000/api/v1
       PORT: "3030"
+      # NextAuth / Auth.js configuration
+      AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-in-production}
+      AUTH_URL: http://localhost:3030
+      AUTH_IITD_ISSUER: ${AUTH_IITD_ISSUER}
+      AUTH_IITD_PUBLIC_ISSUER: ${AUTH_IITD_PUBLIC_ISSUER}
+      AUTH_IITD_CLIENT_ID: iitd-iam-admin
+      # Public client — no secret needed
     ports:
       - "3030:3030"
     depends_on:

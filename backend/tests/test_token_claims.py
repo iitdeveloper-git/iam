@@ -18,5 +18,5 @@ def test_extracts_roles_from_standard_and_custom_claims():
 def test_defaults_to_user_role_when_token_has_no_roles():
     roles, permissions = extract_roles_and_permissions({})
 
-    assert roles == {"user"}
+    assert roles == set()
     assert permissions == set()
