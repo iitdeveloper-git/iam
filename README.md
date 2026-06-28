@@ -55,19 +55,11 @@ Start with:
 
 ## GitHub Deployments
 
-Backend deploys to Hugging Face with `.github/workflows/deploy-backend-huggingface.yaml`.
+Backend deploys to Hugging Face with `.github/workflows/deploy-prod.yml`.
 
 Required GitHub settings:
 
 - Secret: `HF_TOKEN`
-- Optional variable or secret: `HF_SPACE_ID`; defaults to `iitdeveloper/iam`
 
 The Hugging Face Space must have runtime secrets for `IAM_DATABASE_URL`, `IAM_REDIS_URL`, `IAM_KEYCLOAK_BASE_URL`, `IAM_OIDC_ISSUER` and `IAM_OIDC_AUDIENCE`.
 
-Frontend deploys to Netlify with `.github/workflows/deploy-frontend-netlify.yaml`.
-
-Required GitHub settings:
-
-- Secret: `NETLIFY_AUTH_TOKEN`
-- Secret: `NETLIFY_SITE_ID`
-- Variable: `NEXT_PUBLIC_IAM_API_URL`
