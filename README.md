@@ -64,6 +64,15 @@ Start with:
 
 The Netlify admin UI is a TypeScript Next.js app. In the current deployable bridge mode, paste a Keycloak/OIDC access token into the UI session panel; the UI sends API calls with `Authorization: Bearer <token>`.
 
+The UI also includes Auth.js OIDC sign-in. Configure these Netlify environment variables:
+
+- `AUTH_SECRET`
+- `AUTH_URL`
+- `AUTH_IITD_ISSUER`
+- `AUTH_IITD_CLIENT_ID`
+- `AUTH_IITD_CLIENT_SECRET`
+- `NEXT_PUBLIC_IAM_API_URL`
+
 ## GitHub Deployments
 
 Backend deploys to Hugging Face with `.github/workflows/deploy-prod.yml`.

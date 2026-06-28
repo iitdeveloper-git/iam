@@ -9,4 +9,3 @@ NEXT_PUBLIC_IAM_API_URL = "https://YOUR_HUGGING_FACE_SPACE_URL/api/v1"
 
 [[plugins]]
 package = "@netlify/plugin-nextjs"
-

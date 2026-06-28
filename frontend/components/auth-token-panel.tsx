@@ -1,13 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { KeyRound, LogOut, Save } from "lucide-react";
+import { KeyRound, LogIn, LogOut, RefreshCw, Save } from "lucide-react";
 import { clearStoredAccessToken, getMe, getStoredAccessToken, setStoredAccessToken } from "@/lib/api/client";
+
+type AuthSession = {
+  accessToken?: string;
+  user?: {
+    email?: string | null;
+    name?: string | null;
+  };
+};
 
 export function AuthTokenPanel() {
   const [token, setToken] = useState("");
   const [status, setStatus] = useState("No access token configured");
   const [principal, setPrincipal] = useState<string | null>(null);
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
 
   async function verify(nextToken: string | null) {
     if (!nextToken) {
@@ -33,6 +42,19 @@ export function AuthTokenPanel() {
     void verify(stored);
   }, []);
 
+  async function useSignedInSession() {
+    const response = await fetch("/api/auth/session", { cache: "no-store" });
+    const session = (await response.json()) as AuthSession;
+    setSessionEmail(session.user?.email ?? session.user?.name ?? null);
+    if (!session.accessToken) {
+      setStatus("No signed-in OIDC session found");
+      return;
+    }
+    setStoredAccessToken(session.accessToken);
+    setToken(session.accessToken);
+    await verify(session.accessToken);
+  }
+
   function saveToken() {
     setStoredAccessToken(token);
     void verify(token);
@@ -50,6 +72,20 @@ export function AuthTokenPanel() {
       <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-ink">
         <KeyRound className="h-4 w-4 text-brand" />
         IAM API Session
+      </div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <a className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-white" href="/api/auth/signin/iitd-iam">
+          <LogIn className="h-4 w-4" />
+          Sign in
+        </a>
+        <button className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line px-4 text-sm font-medium text-slate-700" type="button" onClick={useSignedInSession}>
+          <RefreshCw className="h-4 w-4" />
+          Use session
+        </button>
+        <a className="inline-flex min-h-10 items-center justify-center gap-2 rounded-md border border-line px-4 text-sm font-medium text-slate-700" href="/api/auth/signout">
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </a>
       </div>
       <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto]">
         <input
@@ -72,6 +108,7 @@ export function AuthTokenPanel() {
       <div className="mt-3 text-sm text-slate-600">
         {status}
         {principal ? <span className="ml-2 text-slate-400">as {principal}</span> : null}
+        {sessionEmail ? <span className="ml-2 text-slate-400">session {sessionEmail}</span> : null}
       </div>
     </section>
   );

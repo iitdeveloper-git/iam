@@ -1,10 +1,10 @@
 # Project State
 
-Current phase: Phase 2 local platform foundation.
+Current phase: UAT end-to-end completion.
 
 Current milestone: Greenfield V1 foundation created from master build prompt.
 
-Current task: Continue Keycloak admin orchestration.
+Current task: Continue UAT end-to-end completion on branch `uat`.
 
 Completed work:
 
@@ -23,11 +23,12 @@ Completed work:
 - Backend now verifies OIDC bearer tokens with JWKS instead of returning a placeholder token error.
 - Readiness now checks PostgreSQL, Redis and Keycloak discovery.
 - Netlify UI no longer depends on development headers and sends `Authorization: Bearer` tokens from a browser session.
+- Netlify UI now includes Auth.js OIDC sign-in route for Keycloak/IITD IAM.
 
 Incomplete work:
 
 - Full Keycloak admin operations.
-- Full automatic OIDC sign-in in admin UI; current deployable bridge accepts a Keycloak access token in the UI session.
+- Live validation of automatic OIDC sign-in in admin UI against Netlify and Keycloak callback settings.
 - Complete CRUD endpoints for every specified action.
 - Email/GNS integration.
 - End-to-end invitation acceptance.
@@ -40,18 +41,18 @@ Blockers:
 - No production DNS, TLS, SMTP/GNS credentials, cloud account, managed database, managed Redis or secret manager credentials are available.
 - Network/package installation may be unavailable in the local sandbox.
 
-Branch: unavailable; this workspace is not currently a git repository.
+Branch: `uat`.
 
-Last commit: unavailable.
+Last commit: `ea2f1ed Add OIDC bearer token integration bridge` before the current Auth.js commit.
 
 Migrations: `backend/alembic/versions/0001_initial_schema.py`.
 
 Running services: not started by this session.
 
-Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 6 passed.
+Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 6 passed. Latest frontend build includes `ƒ /api/auth/[...nextauth]`.
 
 Security status: foundation controls implemented; production verification incomplete.
 
 Deployment status: local Compose artifacts ready; staging/production blocked by external infrastructure.
 
-Next exact action: push local commits after GitHub authentication, then implement full Keycloak admin client operations and replace local dev header flow with OIDC session verification for the admin console.
+Next exact action: configure Netlify `AUTH_*` variables and Keycloak callback URL, then live-test `/api/auth/signin/iitd-iam`.

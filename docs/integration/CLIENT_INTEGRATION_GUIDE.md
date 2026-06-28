@@ -225,7 +225,24 @@ Secrets must be stored in the consuming service secret manager.
 
 The admin console is a TypeScript Next.js application and can deploy on Netlify's free tier.
 
-For the current deployable integration mode:
+Configure these Netlify environment variables:
+
+```text
+AUTH_SECRET
+AUTH_URL
+AUTH_IITD_ISSUER
+AUTH_IITD_CLIENT_ID
+AUTH_IITD_CLIENT_SECRET
+NEXT_PUBLIC_IAM_API_URL
+```
+
+Register this callback URI in Keycloak/IAM:
+
+```text
+https://your-netlify-site.netlify.app/api/auth/callback/iitd-iam
+```
+
+Fallback deployable bridge mode:
 
 1. Configure `NEXT_PUBLIC_IAM_API_URL` in Netlify to the Hugging Face API base URL, for example:
 
@@ -241,4 +258,4 @@ For the current deployable integration mode:
    Authorization: Bearer <access-token>
    ```
 
-This is an integration bridge until full admin-console OIDC sign-in is implemented. It is safer than shipping development headers in the browser and works on Netlify without a paid server.
+This fallback is useful for UAT while OIDC client secrets and callback URLs are being configured.

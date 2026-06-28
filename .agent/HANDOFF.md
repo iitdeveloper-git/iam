@@ -12,6 +12,7 @@ Verified complete:
 - Integration docs and examples now explain how clients use IAM from their own app/server.
 - Backend OIDC bearer token verification is implemented.
 - Netlify UI can call the API with a pasted Keycloak/OIDC access token and builds as static Next.js output.
+- Netlify UI now has Auth.js OIDC sign-in support at `/api/auth/signin/iitd-iam`.
 
 Pending verification:
 
@@ -22,11 +23,11 @@ Next action:
 
 ```bash
 gh auth login
-git push -u origin main
+git push -u origin uat
 ```
 
 Known limitations:
 
 - Keycloak admin integration is not feature-complete.
-- Admin UI uses a bearer-token session bridge until full OIDC sign-in is implemented.
+- Admin UI has Auth.js OIDC sign-in in code, but live Netlify/Keycloak callback validation is still required.
 - Live staging and production deployment are blocked by missing external infrastructure and credentials.
