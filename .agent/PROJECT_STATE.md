@@ -20,11 +20,14 @@ Completed work:
 - CI workflow added.
 - Client integration documentation added for generic clients, FastAPI, Next.js, React SPA, machine-to-machine clients and GNS.
 - API matrix added with honest implementation status.
+- Backend now verifies OIDC bearer tokens with JWKS instead of returning a placeholder token error.
+- Readiness now checks PostgreSQL, Redis and Keycloak discovery.
+- Netlify UI no longer depends on development headers and sends `Authorization: Bearer` tokens from a browser session.
 
 Incomplete work:
 
 - Full Keycloak admin operations.
-- Real OIDC session handling in admin UI.
+- Full automatic OIDC sign-in in admin UI; current deployable bridge accepts a Keycloak access token in the UI session.
 - Complete CRUD endpoints for every specified action.
 - Email/GNS integration.
 - End-to-end invitation acceptance.
@@ -45,7 +48,7 @@ Migrations: `backend/alembic/versions/0001_initial_schema.py`.
 
 Running services: not started by this session.
 
-Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. After integration docs/examples, Python compile and backend unit tests still pass.
+Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 6 passed.
 
 Security status: foundation controls implemented; production verification incomplete.
 

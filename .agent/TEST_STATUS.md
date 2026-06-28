@@ -18,6 +18,9 @@ Actual result:
 - `npm audit --audit-level=moderate`: passed, 0 vulnerabilities after upgrading to Next 16.2.9 and overriding PostCSS to the patched range.
 - After adding integration docs/examples, `python3 -m compileall -q backend/src backend/tests examples/fastapi examples/service-client` passed.
 - After adding integration docs/examples, `pytest backend/tests` passed: 4 passed.
+- After bearer-token and Netlify UI changes, `pytest backend/tests` passed: 6 passed.
+- After bearer-token and Netlify UI changes, `ruff check backend/src backend/tests` passed.
+- After bearer-token and Netlify UI changes, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
 
 Not executed:
 

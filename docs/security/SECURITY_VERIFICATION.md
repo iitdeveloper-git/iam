@@ -8,3 +8,5 @@
 | Plaintext invitation tokens | Hash stored; token shown once | Review | Implemented foundation | Invitation route | Email delivery not wired | Integrate GNS/SMTP |
 | Production dev auth disabled | Settings validator rejects prod dev auth | Review | Implemented | `config.py` | Env misconfig | CI production config check |
 | Dependency advisories | Next upgraded and PostCSS override added | npm audit | Passed | `npm audit --audit-level=moderate` | Future advisories | Run CI scans |
+| Bearer token verification | API validates OIDC JWTs with JWKS, issuer and audience | Unit/review | Passed foundation tests | `pytest backend/tests` | Live Keycloak configuration required | Run live OIDC E2E |
+| Development headers removed from UI | Netlify UI sends `Authorization: Bearer` instead of dev headers | Build/review | Passed | `npm run build` | Token paste bridge is not full SSO | Implement Auth.js/Keycloak sign-in |

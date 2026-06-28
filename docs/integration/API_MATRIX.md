@@ -27,3 +27,8 @@ This matrix tracks the intended V1 API surface and current implementation state.
 
 `Implemented foundation` means the route exists and captures the first business rule shape. It does not mean the endpoint is production-complete.
 
+## Authentication Status
+
+The deployed API now supports real OIDC bearer token verification against the configured issuer JWKS.
+
+The Netlify UI can send bearer tokens through the admin console session panel. Full automatic OIDC login in the admin UI remains planned.

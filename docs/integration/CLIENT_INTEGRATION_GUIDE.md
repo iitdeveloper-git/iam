@@ -221,3 +221,24 @@ Secrets must be stored in the consuming service secret manager.
 - [ ] Logout flow is implemented.
 - [ ] Token refresh strategy is documented.
 
+## Admin Console on Netlify
+
+The admin console is a TypeScript Next.js application and can deploy on Netlify's free tier.
+
+For the current deployable integration mode:
+
+1. Configure `NEXT_PUBLIC_IAM_API_URL` in Netlify to the Hugging Face API base URL, for example:
+
+   ```text
+   https://iitdeveloper-iam.hf.space/api/v1
+   ```
+
+2. Obtain an OIDC access token from the configured Keycloak realm.
+3. Paste the access token into the admin console session panel.
+4. The UI sends API calls with:
+
+   ```text
+   Authorization: Bearer <access-token>
+   ```
+
+This is an integration bridge until full admin-console OIDC sign-in is implemented. It is safer than shipping development headers in the browser and works on Netlify without a paid server.
