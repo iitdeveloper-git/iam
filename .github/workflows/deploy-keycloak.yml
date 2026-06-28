@@ -1,0 +1,63 @@
+name: Deploy Keycloak to Hugging Face Spaces (Production)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "keycloak/**"
+      - "docker/keycloak/**"
+      - "Dockerfile.keycloak"
+      - ".github/workflows/deploy-keycloak.yml"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Build Space bundle
+        run: |
+          rm -rf /tmp/iitd-keycloak-space
+          mkdir -p /tmp/iitd-keycloak-space
+          
+          # Copy Keycloak configurations and resources
+          cp -R keycloak /tmp/iitd-keycloak-space/keycloak
+          cp -R docker /tmp/iitd-keycloak-space/docker
+          cp Dockerfile.keycloak /tmp/iitd-keycloak-space/Dockerfile
+          
+          # Write metadata README for Hugging Face
+          cat > /tmp/iitd-keycloak-space/README.md <<'EOF'
+          ---
+          title: IITD Keycloak IDP
+          sdk: docker
+          app_port: 7860
+          ---
+
+          Keycloak Identity Provider deployed as a Hugging Face Space.
+          EOF
+
+      - name: Upload to Hugging Face Space
+        run: |
+          python -m pip install --upgrade huggingface_hub
+          python - <<'PY'
+          import os
+          from huggingface_hub import HfApi, upload_folder
+
+          token = os.environ["HF_TOKEN"]
+          repo_id = "iitdeveloper/keycloak"
+          api = HfApi(token=token)
+          api.create_repo(repo_id=repo_id, repo_type="space", space_sdk="docker", exist_ok=True)
+          upload_folder(
+              repo_id=repo_id,
+              repo_type="space",
+              folder_path="/tmp/iitd-keycloak-space",
+              token=token,
+              commit_message="Deploy Keycloak from GitHub Actions",
+          )
+          PY
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
