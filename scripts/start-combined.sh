@@ -10,8 +10,8 @@ DB_NAME=$(echo "$IAM_DATABASE_URL" | sed -E 's|postgresql://[^@]+@[^/]+/([^?]+).
 
 echo "Starting Keycloak on port 8080..."
 export KC_DB=postgres
-# Disable prepared statements in JDBC connection string to support transaction pooling (e.g. Supabase connection pooler)
-export KC_DB_URL="jdbc:postgresql://${DB_HOST_PORT_DB}/${DB_NAME}?preparedStatementCacheSize=0"
+# Disable prepared statements completely in JDBC connection string to support transaction pooling (e.g. Supabase connection pooler)
+export KC_DB_URL="jdbc:postgresql://${DB_HOST_PORT_DB}/${DB_NAME}?prepareThreshold=0"
 export KC_DB_USERNAME="$DB_USER"
 export KC_DB_PASSWORD="$DB_PASS"
 
