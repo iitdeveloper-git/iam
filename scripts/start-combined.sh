@@ -20,85 +20,49 @@ wait 2>/dev/null || true
 trap cleanup EXIT INT TERM
 
 require_env() {
-local name="$1"
+local variable_name="$1"
 
-if [[ -z "${!name:-}" ]]; then
-echo "Required environment variable is missing: $name" >&2
+if [[ -z "${!variable_name:-}" ]]; then
+echo "Missing required environment variable: ${variable_name}" >&2
 exit 1
 fi
 }
 
+# FastAPI configuration
+
 require_env IAM_DATABASE_URL
 require_env IAM_REDIS_URL
+require_env IAM_ENVIRONMENT
 require_env IAM_OIDC_ISSUER
 require_env IAM_OIDC_JWKS_URL
+require_env IAM_OIDC_AUDIENCE
 
-echo "Parsing PostgreSQL configuration..."
+# Keycloak database configuration
 
-mapfile -t DB_PARTS < <(
-python - <<'PY'
-import os
-from urllib.parse import unquote, urlparse
+require_env KC_DB_URL
+require_env KC_DB_USERNAME
+require_env KC_DB_PASSWORD
 
-database_url = os.environ["IAM_DATABASE_URL"]
+export KC_DB="${KC_DB:-postgres}"
+export KC_DB_SCHEMA="${KC_DB_SCHEMA:-keycloak}"
 
-for prefix in (
-"postgresql+asyncpg://",
-"postgresql+psycopg://",
-"postgresql+psycopg2://",
-):
-if database_url.startswith(prefix):
-database_url = database_url.replace(prefix, "postgresql://", 1)
-break
+export KC_HTTP_ENABLED="${KC_HTTP_ENABLED:-true}"
+export KC_HTTP_PORT="${KC_HTTP_PORT:-8080}"
+export KC_PROXY_HEADERS="${KC_PROXY_HEADERS:-xforwarded}"
 
-parsed = urlparse(database_url)
+export KC_HOSTNAME="${KC_HOSTNAME:-https://iitdeveloper-iam.hf.space}"
+export KC_HOSTNAME_STRICT="${KC_HOSTNAME_STRICT:-false}"
 
-if not parsed.hostname:
-raise SystemExit("IAM_DATABASE_URL does not contain a valid hostname")
+export IAM_KEYCLOAK_BASE_URL="${IAM_KEYCLOAK_BASE_URL:-[http://127.0.0.1:8080}](http://127.0.0.1:8080})"
 
-print(unquote(parsed.username or ""))
-print(unquote(parsed.password or ""))
-print(parsed.hostname)
-print(parsed.port or 5432)
-print(unquote((parsed.path or "").lstrip("/")))
-PY
-)
-
-DB_USER="${DB_PARTS[0]:-}"
-DB_PASS="${DB_PARTS[1]:-}"
-DB_HOST="${DB_PARTS[2]:-}"
-DB_PORT="${DB_PARTS[3]:-5432}"
-DB_NAME="${DB_PARTS[4]:-}"
-
-if [[ -z "$DB_USER" || -z "$DB_HOST" || -z "$DB_NAME" ]]; then
-echo "Could not parse IAM_DATABASE_URL" >&2
-exit 1
-fi
-
-echo "Database configuration parsed successfully."
-echo "Database host: ${DB_HOST}:${DB_PORT}"
-echo "Database name: ${DB_NAME}"
-
-# Never print DB_PASS.
+echo "Validating Nginx configuration..."
+nginx -t
 
 echo "Starting Keycloak on port 8080..."
 
-export KC_DB=postgres
-export KC_DB_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?prepareThreshold=0"
-export KC_DB_USERNAME="$DB_USER"
-export KC_DB_PASSWORD="$DB_PASS"
+# KC_DB_URL should already contain:
 
-# Recommended when IAM and Keycloak share one PostgreSQL database.
-
-# The schema should exist and the database user must have permission to use it.
-
-export KC_DB_SCHEMA="${KC_DB_SCHEMA:-keycloak}"
-
-export KC_PROXY_HEADERS=xforwarded
-export KC_HOSTNAME="${KC_HOSTNAME:-https://iitdeveloper-iam.hf.space}"
-export KC_HOSTNAME_STRICT="${KC_HOSTNAME_STRICT:-false}"
-export KC_HTTP_ENABLED=true
-export KC_HTTP_PORT=8080
+# jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
 
 /opt/keycloak/bin/kc.sh start 
 --http-port=8080 
@@ -129,25 +93,23 @@ echo "Keycloak is ready."
 break
 fi
 
-echo "Keycloak is not ready yet (${attempt}/90)..."
+echo "Waiting for Keycloak (${attempt}/90)..."
 sleep 2
 done
 
 if [[ "$KEYCLOAK_READY" != "true" ]]; then
-echo "Keycloak did not become ready within the expected time." >&2
+echo "Keycloak did not become ready within 180 seconds." >&2
 exit 1
 fi
 
 echo "Applying IAM database migrations..."
 
+cd /app
 alembic upgrade head
 
-echo "IAM database migrations completed."
+echo "IAM migrations completed."
 
 echo "Starting FastAPI on port 8000..."
-
-export IAM_KEYCLOAK_BASE_URL="http://127.0.0.1:8080"
-export IAM_OIDC_ISSUER="${IAM_OIDC_ISSUER:-https://iitdeveloper-iam.hf.space/realms/iitd}"
 
 uvicorn iitd_iam.main:app 
 --host 127.0.0.1 
@@ -180,12 +142,12 @@ echo "FastAPI is ready."
 break
 fi
 
-echo "FastAPI is not ready yet (${attempt}/60)..."
+echo "Waiting for FastAPI (${attempt}/60)..."
 sleep 1
 done
 
 if [[ "$API_READY" != "true" ]]; then
-echo "FastAPI did not become ready within the expected time." >&2
+echo "FastAPI did not become ready within 60 seconds." >&2
 exit 1
 fi
 
@@ -204,9 +166,9 @@ exit 1
 fi
 
 echo "All IAM services started successfully."
-echo "Public endpoint: https://iitdeveloper-iam.hf.space"
+echo "Public URL: https://iitdeveloper-iam.hf.space"
 
-# Exit the container when any critical process exits.
+# Stop the container if Keycloak, FastAPI, or Nginx exits.
 
 set +e
 wait -n "$KEYCLOAK_PID" "$API_PID" "$NGINX_PID"
