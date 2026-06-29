@@ -3,7 +3,17 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl
 
-from iitd_iam.models import ApplicationStatus, AuthorizationMode, ClientType, EnvironmentName, GrantStatus, InvitationStatus, UserStatus
+from iitd_iam.models import (
+    ApplicationStatus,
+    AssignmentSource,
+    AuthorizationMode,
+    ClientType,
+    EnvironmentName,
+    GrantStatus,
+    InvitationStatus,
+    RoleScope,
+    UserStatus,
+)
 
 
 class Page(BaseModel):
@@ -12,6 +22,10 @@ class Page(BaseModel):
     limit: int = 50
     offset: int = 0
 
+
+# ---------------------------------------------------------------------------
+# User
+# ---------------------------------------------------------------------------
 
 class UserOut(BaseModel):
     id: UUID
@@ -29,11 +43,21 @@ class UserCreate(BaseModel):
     display_name: str | None = None
 
 
+# ---------------------------------------------------------------------------
+# Application
+# ---------------------------------------------------------------------------
+
 class ApplicationCreate(BaseModel):
     key: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{1,78}[a-z0-9]$")
     name: str
     description: str | None = None
     authorization_mode: AuthorizationMode
+
+
+class ApplicationUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    status: ApplicationStatus | None = None
 
 
 class ApplicationOut(ApplicationCreate):
@@ -43,6 +67,10 @@ class ApplicationOut(ApplicationCreate):
 
     model_config = {"from_attributes": True}
 
+
+# ---------------------------------------------------------------------------
+# Environment / Client
+# ---------------------------------------------------------------------------
 
 class EnvironmentCreate(BaseModel):
     environment: EnvironmentName
@@ -65,6 +93,10 @@ class RedirectUriCreate(BaseModel):
     environment: EnvironmentName
 
 
+# ---------------------------------------------------------------------------
+# Invitation
+# ---------------------------------------------------------------------------
+
 class InvitationCreate(BaseModel):
     email: str
     application_id: UUID | None = None
@@ -80,7 +112,107 @@ class InvitationOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class InvitationAcceptRequest(BaseModel):
+    """Body for POST /invitations/accept — token in body, never in URL."""
+    token: str
+
+
+class _AcceptUserOut(BaseModel):
+    id: UUID
+    email: str
+
+
+class _AcceptApplicationOut(BaseModel):
+    id: UUID
+    name: str
+
+
+class _AcceptRoleAssignmentOut(BaseModel):
+    id: UUID
+    role_id: UUID
+    role_name: str
+    source: AssignmentSource
+
+
+class InvitationAcceptOut(BaseModel):
+    invitation_id: UUID
+    status: str
+    accepted_at: datetime
+    user: _AcceptUserOut
+    application: _AcceptApplicationOut | None
+    role_assignment: _AcceptRoleAssignmentOut | None
+
+
+# ---------------------------------------------------------------------------
+# Grant
+# ---------------------------------------------------------------------------
+
 class GrantCreate(BaseModel):
     user_id: UUID
     status: GrantStatus = GrantStatus.active
 
+
+# ---------------------------------------------------------------------------
+# Role
+# ---------------------------------------------------------------------------
+
+class RoleCreate(BaseModel):
+    """Creates an application-scoped role. scope is always 'application' via the API."""
+    key: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{0,118}[a-z0-9]$")
+    name: str
+    description: str | None = None
+
+
+class RoleOut(BaseModel):
+    id: UUID
+    key: str
+    name: str
+    description: str | None
+    scope: RoleScope
+    application_id: UUID | None
+    is_system: bool
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RoleUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    is_active: bool | None = None
+
+
+# ---------------------------------------------------------------------------
+# Permission
+# ---------------------------------------------------------------------------
+
+class PermissionOut(BaseModel):
+    id: UUID
+    key: str
+    name: str
+    description: str | None
+    application_id: UUID | None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Role Assignment
+# ---------------------------------------------------------------------------
+
+class RoleAssignmentCreate(BaseModel):
+    role_id: UUID
+
+
+class RoleAssignmentOut(BaseModel):
+    id: UUID
+    user_id: UUID
+    role_id: UUID
+    application_id: UUID | None
+    status: GrantStatus
+    source: AssignmentSource
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

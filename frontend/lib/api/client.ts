@@ -15,8 +15,36 @@ export function clearStoredAccessToken() {
   window.sessionStorage.removeItem("iitd_iam_access_token");
 }
 
+type AuthSession = {
+  accessToken?: string;
+};
+
+let sessionTokenPromise: Promise<string | null> | null = null;
+
+async function getSessionAccessToken(force = false) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  if (!force && sessionTokenPromise) {
+    return sessionTokenPromise;
+  }
+  sessionTokenPromise = fetch("/api/auth/session", { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) return null;
+      const session = (await response.json()) as AuthSession;
+      if (!session.accessToken) return null;
+      setStoredAccessToken(session.accessToken);
+      return session.accessToken;
+    })
+    .catch(() => null);
+  return sessionTokenPromise;
+}
+
 async function request<T>(path: string, token?: string | null, options?: RequestInit): Promise<T> {
-  const accessToken = token ?? getStoredAccessToken();
+  let accessToken = token ?? getStoredAccessToken();
+  if (!accessToken) {
+    accessToken = await getSessionAccessToken();
+  }
   const headers: Record<string, string> = {};
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
@@ -29,6 +57,13 @@ async function request<T>(path: string, token?: string | null, options?: Request
     headers,
     cache: "no-store"
   });
+  if (response.status === 401 && !token && typeof window !== "undefined") {
+    clearStoredAccessToken();
+    const refreshedToken = await getSessionAccessToken(true);
+    if (refreshedToken && refreshedToken !== accessToken) {
+      return request<T>(path, refreshedToken, options);
+    }
+  }
   if (!response.ok) {
     let message = `API request failed: ${response.status}`;
     try {
@@ -56,6 +91,11 @@ export type Application = {
   name: string;
   authorization_mode: string;
   status: string;
+  description?: string;
+  logo_url?: string;
+  homepage_url?: string;
+  privacy_policy_url?: string;
+  terms_url?: string;
 };
 
 export async function getUsers(token?: string | null) {
@@ -143,5 +183,188 @@ export async function createApplication(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
+  });
+}
+
+export async function getApplication(appId: string, token?: string | null) {
+  return request<Application>(`/applications/${appId}`, token);
+}
+
+export async function updateApplication(
+  appId: string,
+  payload: { name?: string; description?: string; status?: string },
+  token?: string | null
+) {
+  return request<Application>(`/applications/${appId}`, token, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+export type Role = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  scope: string;
+  application_id: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string;
+};
+
+export async function getApplicationRoles(appId: string, token?: string | null) {
+  return request<Role[]>(`/applications/${appId}/roles`, token);
+}
+
+export async function createApplicationRole(
+  appId: string,
+  payload: { key: string; name: string; description?: string },
+  token?: string | null
+) {
+  return request<Role>(`/applications/${appId}/roles`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function updateRole(
+  appId: string,
+  roleId: string,
+  payload: { name?: string; description?: string; is_active?: boolean },
+  token?: string | null
+) {
+  return request<Role>(`/applications/${appId}/roles/${roleId}`, token, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+export type Permission = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  application_id: string | null;
+  created_at: string;
+};
+
+export async function getRolePermissions(appId: string, roleId: string, token?: string | null) {
+  return request<Permission[]>(`/applications/${appId}/roles/${roleId}/permissions`, token);
+}
+
+export async function updateRolePermissions(
+  appId: string,
+  roleId: string,
+  permissionIds: string[],
+  token?: string | null
+) {
+  return request<{ status: string }>(`/applications/${appId}/roles/${roleId}/permissions`, token, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(permissionIds)
+  });
+}
+
+export type AccessGrant = {
+  id: string;
+  user_id: string;
+  email: string;
+  display_name: string | null;
+  status: string;
+  granted_at: string;
+  assigned_roles: string[];
+};
+
+export async function getApplicationAccessGrants(appId: string, token?: string | null) {
+  return request<AccessGrant[]>(`/applications/${appId}/access-grants`, token);
+}
+
+export async function grantApplicationAccess(
+  appId: string,
+  payload: { user_id: string; status?: string },
+  token?: string | null
+) {
+  return request<{ id: string; status: string }>(`/applications/${appId}/access-grants`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function revokeApplicationAccess(appId: string, grantId: string, token?: string | null) {
+  return request<{ status: string }>(`/applications/${appId}/access-grants/${grantId}`, token, {
+    method: "DELETE"
+  });
+}
+
+export async function getPermissions(applicationId?: string, token?: string | null) {
+  const path = applicationId ? `/permissions?application_id=${applicationId}` : "/permissions";
+  return request<Permission[]>(path, token);
+}
+
+export async function getScopedAuditEvents(applicationId?: string, token?: string | null) {
+  const path = applicationId ? `/audit-events?application_id=${applicationId}` : "/audit-events";
+  return request<AuditEventsResponse>(path, token);
+}
+
+export type RoleAssignment = {
+  id: string;
+  user_id: string;
+  role_id: string;
+  application_id: string | null;
+  status: string;
+  source: string;
+  created_at: string;
+};
+
+export async function getUserRoleAssignments(userId: string, token?: string | null) {
+  return request<RoleAssignment[]>(`/users/${userId}/role-assignments`, token);
+}
+
+export async function assignRoleToUser(userId: string, roleId: string, token?: string | null) {
+  return request<RoleAssignment>(`/users/${userId}/role-assignments`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role_id: roleId })
+  });
+}
+
+export async function revokeUserRoleAssignment(userId: string, assignmentId: string, token?: string | null) {
+  return request<{ status: string }>(`/users/${userId}/role-assignments/${assignmentId}`, token, {
+    method: "DELETE"
+  });
+}
+
+export type Invitation = {
+  id: string;
+  email: string;
+  status: string;
+  expires_at: string;
+  application_id?: string | null;
+  role_id?: string | null;
+};
+
+export async function getInvitations(token?: string | null) {
+  return request<Invitation[]>("/invitations", token);
+}
+
+export async function createInvitation(
+  payload: { email: string; application_id?: string; role_id?: string },
+  token?: string | null
+) {
+  return request<{ id: string; status: string; acceptance_token?: string }>("/invitations", token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function revokeInvitation(invitationId: string, token?: string | null) {
+  return request<{ status: string }>(`/invitations/${invitationId}/revoke`, token, {
+    method: "POST"
   });
 }

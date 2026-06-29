@@ -1,4 +1,5 @@
 from typing import Annotated
+from collections.abc import AsyncGenerator
 
 from fastapi import Depends, Header
 
@@ -6,6 +7,7 @@ from iitd_iam.auth.identity import CurrentPrincipal
 from iitd_iam.auth.permissions import has_permission
 from iitd_iam.config import get_settings
 from iitd_iam.errors import ApiError
+from iitd_iam.integrations.keycloak.client import KeycloakHttpClient
 from iitd_iam.integrations.keycloak.token_verifier import (
     TokenVerifier,
     extract_roles_and_permissions,
@@ -50,10 +52,6 @@ def require_permission(permission: str):
         raise ApiError("PERMISSION_DENIED", "The principal lacks the required permission.", status_code=403)
 
     return dependency
-
-
-from collections.abc import AsyncGenerator
-from iitd_iam.integrations.keycloak.client import KeycloakHttpClient
 
 async def get_keycloak_client() -> AsyncGenerator[KeycloakHttpClient, None]:
     settings = get_settings()

@@ -204,7 +204,7 @@ class TokenVerifier:
 
         try:
             claims = await decode_with(await self.get_jwks())
-        except JWTError as first_error:
+        except JWTError:
             # Keycloak may have rotated its signing key. Refresh JWKS once.
             try:
                 claims = await decode_with(

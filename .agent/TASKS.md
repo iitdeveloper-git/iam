@@ -40,7 +40,7 @@ Files: `backend/src/iitd_iam/integrations/keycloak/`.
 
 Tests: unit tests with mock Keycloak, integration tests with live Keycloak.
 
-Status: IN_PROGRESS
+Status: DONE
 
 ## IAM-005
 
@@ -83,3 +83,31 @@ Files: `frontend/`, `backend/src/iitd_iam/auth/`.
 Tests: E2E login smoke test.
 
 Status: TODO
+
+## IAM-007
+
+Description: Application RBAC UI and backend gaps.
+
+Acceptance criteria: application lifecycle administration, active/disabled roles management, permission replacement, access grant revocation cascades, and GNS CLI bootstrap.
+
+Dependencies: IAM-003.
+
+Files: `backend/`, `frontend/`, `docs/`, migration.
+
+Tests: `pytest tests/test_app_rbac.py` and frontend builds.
+
+Status: DONE
+
+## IAM-008
+
+Description: Modern Admin Console UI/UX Revamp.
+
+Acceptance criteria: admin console uses compact enterprise shell, grouped responsive navigation, top-right profile menu, modern dashboard, applications registry, and application overview without the large token/session panel on normal pages.
+
+Dependencies: IAM-004, IAM-007.
+
+Files: `frontend/components/`, `frontend/app/`, `docs/IAM_008_UI_REVAMP.md`.
+
+Tests: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+
+Status: DONE

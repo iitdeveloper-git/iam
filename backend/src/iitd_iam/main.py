@@ -23,7 +23,7 @@ def create_app() -> FastAPI:
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         details = []
         for err in exc.errors():
-            loc = " -> ".join(str(l) for l in err.get("loc", []))
+            loc = " -> ".join(str(item) for item in err.get("loc", []))
             msg = err.get("msg", "invalid value")
             details.append(f"{loc}: {msg}")
         api_error = ApiError(

@@ -1,0 +1,33 @@
+.git
+.github
+.gitignore
+.agent
+.antigravityignore
+.ruff_cache
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+.env.*
+
+# Frontend build artifacts and packages
+node_modules
+**/node_modules
+.next
+**/.next
+frontend/.next
+frontend/node_modules
+out
+build
+dist
+
+# Backend build artifacts and environments
+.venv
+**/venv
+**/.venv
+backend/.venv
+backend/build
+backend/dist
+backend/*.egg-info

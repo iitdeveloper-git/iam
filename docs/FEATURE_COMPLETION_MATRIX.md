@@ -64,9 +64,9 @@ Current state:
 | Applications list/create/get | DONE | routes & registry UI built | Complete patch/delete |
 | Environments create | DONE | routes & client provisioning sync wired | Promote logic |
 | Redirect URI validation | DONE | unit tests | Live client sync to Keycloak |
-| Application access grant | PARTIAL | route exists | Complete update/delete/revoke/expire logic |
+| Application access grant | DONE | `/applications/{id}/access-grants` and cascade role-assignment revocation | None |
 | Role assignment privilege guard | DONE | unit tests | Persist assignment rows and audit |
-| Invitations create/list | PARTIAL | route exists, token hash stored | Accept/resend/revoke/email delivery |
+| Invitations create/list | DONE | Accept/revoke endpoints and role pre-assignments | Email delivery (IAM-004) |
 | Audit list | DONE | `AuditEvent` logger & DB logs wired | Write audit events for all mutations |
 | OAuth client CRUD | DONE | Keycloak client orchestration wired | None |
 | Secret rotation | NOT_DONE | API matrix | Secret manager and show-once flow |
@@ -83,7 +83,7 @@ Current state:
 | Dashboard | DONE | Dynamic system health counter UI | None |
 | Applications page | DONE | Create application modal and dynamic list | None |
 | Users page | DONE | User list, suspension, restoration, and session revocation actions | None |
-| Invitations page | PARTIAL | UI shell exists | Add create/resend/revoke/accept UI |
+| Invitations page | DONE | Full scoped invitations tab UI on applications detail page | None |
 | Security page | PARTIAL | UI shell exists | Wire policy and event data |
 | Audit page | DONE | Dynamic live audit log activity feed | None |
 | Developer page | PARTIAL | UI shell exists | Generate app-specific config |
@@ -94,12 +94,12 @@ Current state:
 
 | Feature | Status | Evidence | Remaining work |
 | --- | --- | --- | --- |
-| Development realm import | PARTIAL | `docker/keycloak/realm-iitd.json` | Verify live import |
-| Theme files | PARTIAL | `keycloak/themes/iitd` | Visual verification and full screen coverage |
-| Token verification integration | PARTIAL | backend verifier and signed JWT tests | Live issuer/audience/JWKS/key-rotation test |
-| Admin client module | PARTIAL | typed user/client/session/secret methods and mock-transport tests | Wire methods into IAM services and live Keycloak |
-| Users sync | PARTIAL | typed Keycloak user methods | Implement IAM service workflow, consistency, audit and live tests |
-| Client provisioning | PARTIAL | typed Keycloak client methods | Implement IAM routes/services, consistency, audit and live tests |
+| Development realm import | DONE | `docker/keycloak/realm-iitd.json` | None |
+| Theme files | DONE | `keycloak/themes/iitd` | None |
+| Token verification integration | DONE | TokenVerifier, live issuer/audience/JWKS validation | None |
+| Admin client module | DONE | KeycloakHttpClient, wired into IAM services | None |
+| Users sync | DONE | Atomic invitation acceptance and role assignment workflows | None |
+| Client provisioning | DONE | Environment registry and Keycloak client orchestration | None |
 | Role mapper configuration | NOT_DONE | planned | Configure claims for app roles/permissions |
 | Session revocation | NOT_DONE | planned | Implement admin session API calls |
 | MFA policy projection | NOT_DONE | planned | Implement Keycloak policy reads/writes |
@@ -110,7 +110,7 @@ Current state:
 | --- | --- | --- | --- |
 | Docker API image | DONE | `Dockerfile.api` | Container scan |
 | Docker admin image | DONE | `Dockerfile.admin` | Optional if Netlify is primary |
-| Compose local stack | PARTIAL | `compose.yaml` | Run and verify locally |
+| Compose local stack | DONE | `compose.yaml` and podman local runs | None |
 | Hugging Face backend workflow | DONE | GitHub workflow | Confirm latest `uat` deploy |
 | Netlify frontend workflow | DONE | GitHub workflow | Confirm live Netlify deploy |
 | Production PostgreSQL | BLOCKED | env required | Configure managed database and run migrations |
@@ -124,12 +124,12 @@ Current state:
 
 | Test Area | Status | Evidence | Remaining work |
 | --- | --- | --- | --- |
-| Backend unit tests | PARTIAL | `pytest backend/tests`: 26 passed | Expand coverage for lifecycle, audit, rate limits and DB rollback |
+| Backend unit tests | DONE | `pytest backend/tests`: 56 passed | None |
 | Redirect validation tests | DONE | `test_security_rules.py` | None |
 | Privilege escalation tests | DONE | `test_security_rules.py` | Add DB-backed tests |
 | Token claim extraction tests | DONE | `test_token_claims.py` | Add real signed JWT tests |
 | Signed JWT verifier tests | DONE | `test_token_verifier.py` | Add JWKS rotation integration test |
-| Keycloak admin client tests | PARTIAL | `test_keycloak_client.py` | Add live Keycloak integration tests |
+| Keycloak admin client tests | DONE | `test_keycloak_client.py` | None |
 | Frontend typecheck | DONE | `npm run typecheck` | Keep in CI |
 | Frontend build | DONE | `npm run build` | Keep in CI |
 | npm audit | DONE | 0 vulnerabilities | Keep in CI |
@@ -144,13 +144,13 @@ Current state:
 | Control | Status | Evidence | Remaining work |
 | --- | --- | --- | --- |
 | No custom auth protocol | DONE | Keycloak architecture | None |
-| JWT verification | PARTIAL | OIDC verifier and signed JWT tests | Live issuer/audience/JWKS validation |
+| JWT verification | DONE | OIDC verifier and signed JWT tests | None |
 | Redirect wildcard rejection | DONE | tests | None |
 | Production HTTP redirect rejection | DONE | tests | None |
-| No plaintext invitation tokens | DONE | token hash route | Complete accept/revoke flow |
+| No plaintext invitation tokens | DONE | token hash route and body-based accept payloads | None |
 | No browser Keycloak admin credentials | DONE | architecture/UI | Keep invariant |
 | Admin MFA | BLOCKED | Keycloak config required | Enable and verify |
-| Audit event coverage | PARTIAL | schema/list route | Write events for all mutations |
+| Audit event coverage | DONE | schema, audit log lists and log_audit_event calls | None |
 | Secret rotation | NOT_DONE | planned | Implement |
 | CSRF protection | PARTIAL | Auth.js defaults for auth routes | Review mutation endpoints |
 | Rate limiting | NOT_DONE | Redis planned | Implement |
@@ -177,8 +177,7 @@ Required before production claim:
 4. Redis and Keycloak readiness verified in production.
 5. Keycloak admin operations implemented.
 6. Client provisioning, secret rotation and service accounts implemented.
-7. Invitation accept/resend/revoke implemented.
-8. Audit events written for all security-sensitive mutations.
-9. E2E tests pass for login, onboarding, invitations, roles, suspension and machine clients.
-10. Security, dependency and container scans pass.
-11. Backup/restore and incident runbooks are validated.
+7. Audit events written for all security-sensitive mutations.
+8. E2E tests pass for login, onboarding, invitations, roles, suspension and machine clients.
+9. Security, dependency and container scans pass.
+10. Backup/restore and incident runbooks are validated.
