@@ -40,7 +40,7 @@ Files: `backend/src/iitd_iam/integrations/keycloak/`.
 
 Tests: unit tests with mock Keycloak, integration tests with live Keycloak.
 
-Status: IN_PROGRESS
+Status: DONE
 
 ## IAM-005
 

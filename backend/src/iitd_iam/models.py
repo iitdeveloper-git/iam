@@ -13,6 +13,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -30,6 +31,8 @@ class UserStatus(StrEnum):
 
 class ApplicationStatus(StrEnum):
     active = "active"
+    suspended = "suspended"
+    archived = "archived"
     disabled = "disabled"
     deleted = "deleted"
 
@@ -64,6 +67,12 @@ class GrantStatus(StrEnum):
 class RoleScope(StrEnum):
     platform = "platform"
     application = "application"
+
+
+class AssignmentSource(StrEnum):
+    invitation = "invitation"
+    manual = "manual"
+    system = "system"
 
 
 class InvitationStatus(StrEnum):
@@ -213,12 +222,30 @@ class UserRoleAssignment(Base):
     application_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("applications.id"), index=True)
     role_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("roles.id"))
     status: Mapped[GrantStatus] = mapped_column(Enum(GrantStatus), default=GrantStatus.active)
+    source: Mapped[str] = mapped_column(String(40), nullable=False, default=AssignmentSource.manual)
     assigned_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
-    __table_args__ = (Index("ix_user_role_assignment_lookup", "user_id", "application_id"),)
+    __table_args__ = (
+        # Partial unique index: platform roles (application_id IS NULL)
+        Index(
+            "uq_platform_role_assignment",
+            "user_id", "role_id",
+            unique=True,
+            postgresql_where=text("application_id IS NULL"),
+            sqlite_where=text("application_id IS NULL"),
+        ),
+        # Partial unique index: application-scoped roles (application_id IS NOT NULL)
+        Index(
+            "uq_application_role_assignment",
+            "user_id", "role_id", "application_id",
+            unique=True,
+            postgresql_where=text("application_id IS NOT NULL"),
+            sqlite_where=text("application_id IS NOT NULL"),
+        ),
+    )
 
 
 class Invitation(Base):
