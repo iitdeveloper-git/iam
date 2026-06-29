@@ -15,8 +15,36 @@ export function clearStoredAccessToken() {
   window.sessionStorage.removeItem("iitd_iam_access_token");
 }
 
+type AuthSession = {
+  accessToken?: string;
+};
+
+let sessionTokenPromise: Promise<string | null> | null = null;
+
+async function getSessionAccessToken(force = false) {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  if (!force && sessionTokenPromise) {
+    return sessionTokenPromise;
+  }
+  sessionTokenPromise = fetch("/api/auth/session", { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) return null;
+      const session = (await response.json()) as AuthSession;
+      if (!session.accessToken) return null;
+      setStoredAccessToken(session.accessToken);
+      return session.accessToken;
+    })
+    .catch(() => null);
+  return sessionTokenPromise;
+}
+
 async function request<T>(path: string, token?: string | null, options?: RequestInit): Promise<T> {
-  const accessToken = token ?? getStoredAccessToken();
+  let accessToken = token ?? getStoredAccessToken();
+  if (!accessToken) {
+    accessToken = await getSessionAccessToken();
+  }
   const headers: Record<string, string> = {};
   if (accessToken) {
     headers["Authorization"] = `Bearer ${accessToken}`;
@@ -29,6 +57,13 @@ async function request<T>(path: string, token?: string | null, options?: Request
     headers,
     cache: "no-store"
   });
+  if (response.status === 401 && !token && typeof window !== "undefined") {
+    clearStoredAccessToken();
+    const refreshedToken = await getSessionAccessToken(true);
+    if (refreshedToken && refreshedToken !== accessToken) {
+      return request<T>(path, refreshedToken, options);
+    }
+  }
   if (!response.ok) {
     let message = `API request failed: ${response.status}`;
     try {

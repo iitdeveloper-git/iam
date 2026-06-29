@@ -98,3 +98,16 @@ Tests: `pytest tests/test_app_rbac.py` and frontend builds.
 
 Status: DONE
 
+## IAM-008
+
+Description: Modern Admin Console UI/UX Revamp.
+
+Acceptance criteria: admin console uses compact enterprise shell, grouped responsive navigation, top-right profile menu, modern dashboard, applications registry, and application overview without the large token/session panel on normal pages.
+
+Dependencies: IAM-004, IAM-007.
+
+Files: `frontend/components/`, `frontend/app/`, `docs/IAM_008_UI_REVAMP.md`.
+
+Tests: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
+
+Status: DONE
