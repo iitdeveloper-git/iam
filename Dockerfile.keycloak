@@ -9,5 +9,5 @@ COPY ./keycloak/themes/iitd /opt/keycloak/themes/iitd
 # Configure Keycloak HTTP port to match Hugging Face standard
 EXPOSE 7860
 
-# Run Keycloak start-dev command
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start-dev", "--http-port=7860", "--import-realm"]
+# Run Keycloak start-dev command with proxy headers enabled for Hugging Face
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start-dev", "--http-port=7860", "--import-realm", "--proxy-headers=xforwarded"]
