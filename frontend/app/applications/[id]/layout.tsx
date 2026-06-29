@@ -1,20 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useParams, usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import {
+  AppWindow,
+  BookOpen,
+  ChevronDown,
+  Copy,
+  MoreHorizontal,
+  ShieldAlert,
+  Sparkles
+} from "lucide-react";
 import { Shell } from "@/components/shell";
+import { ErrorState, LoadingState, StatusBadge, authModeLabel } from "@/components/ui";
 import { getApplication, updateApplication, type Application } from "@/lib/api/client";
-import { AppWindow, ShieldAlert, Sparkles, ShieldCheck } from "lucide-react";
 
 export default function ApplicationLayout({ children }: { children: React.ReactNode }) {
   const { id } = useParams() as { id: string };
   const pathname = usePathname();
-  const router = useRouter();
   const [app, setApp] = useState<Application | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const loadApp = () => {
     getApplication(id)
@@ -23,26 +32,17 @@ export default function ApplicationLayout({ children }: { children: React.ReactN
   };
 
   useEffect(() => {
-    if (id) {
-      loadApp();
-    }
+    if (id) loadApp();
   }, [id]);
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!app) return;
-    
-    // Confirmations
-    if (newStatus === "archived" && !confirm("Warning: Archiving this application is a permanent action and cannot be undone. Do you wish to proceed?")) {
-      return;
-    }
-    if (newStatus === "suspended" && !confirm("Are you sure you want to suspend this application? Access and mutations will be blocked.")) {
-      return;
-    }
+    if (!app || newStatus === app.status) return;
+    if (newStatus === "archived" && !confirm("Archiving this application is permanent. Do you want to continue?")) return;
+    if (newStatus === "suspended" && !confirm("Suspend this application? Access mutations will be blocked.")) return;
 
     setStatusLoading(true);
     setError(null);
     setSuccess(null);
-
     try {
       await updateApplication(app.id, { status: newStatus });
       setSuccess(`Application status updated to ${newStatus}`);
@@ -57,10 +57,7 @@ export default function ApplicationLayout({ children }: { children: React.ReactN
   if (error && !app) {
     return (
       <Shell>
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
-          <ShieldAlert className="h-4 w-4" />
-          {error}
-        </div>
+        <ErrorState message={error} />
       </Shell>
     );
   }
@@ -68,7 +65,7 @@ export default function ApplicationLayout({ children }: { children: React.ReactN
   if (!app) {
     return (
       <Shell>
-        <div className="text-center py-10 text-slate-500">Loading application details...</div>
+        <LoadingState label="Loading application details" />
       </Shell>
     );
   }
@@ -79,70 +76,113 @@ export default function ApplicationLayout({ children }: { children: React.ReactN
     { name: "Permissions", href: `/applications/${app.id}/permissions` },
     { name: "Users & Access", href: `/applications/${app.id}/access` },
     { name: "Invitations", href: `/applications/${app.id}/invitations` },
-    { name: "Audit", href: `/applications/${app.id}/audit` },
+    { name: "Audit", href: `/applications/${app.id}/audit` }
   ];
 
   return (
     <Shell>
-      <div className="mb-6 flex flex-col gap-4 border-b border-line pb-5 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="rounded-md bg-brand/10 p-3 text-brand">
-            <AppWindow className="h-6 w-6" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-ink">{app.name}</h1>
-              <span className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${
-                app.status === "active" ? "bg-emerald-50 text-emerald-700" :
-                app.status === "suspended" ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
-              }`}>
-                {app.status.toUpperCase()}
-              </span>
-            </div>
-            <code className="text-xs text-slate-500 font-mono">{app.key}</code>
-          </div>
+      <div className="mb-6">
+        <div className="mb-4 text-sm text-slate-500">
+          <Link href="/applications" className="font-semibold text-brand hover:text-brand-dark">Applications</Link>
+          <span> / {app.name}</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-slate-600">Application Lifecycle Status:</label>
-          <select
-            value={app.status}
-            disabled={statusLoading || app.status === "archived"}
-            onChange={(e) => handleStatusChange(e.target.value)}
-            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs text-slate-700 focus:border-brand focus:outline-none disabled:opacity-50"
-          >
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-            <option value="archived">Archived (Immutable)</option>
-          </select>
+        <div className="flex flex-col gap-4 border-b border-line pb-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-brand/10 text-brand">
+              <AppWindow className="h-6 w-6" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-semibold text-ink">{app.name}</h1>
+                <StatusBadge status={app.status} />
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+                <span className="rounded-full bg-slate-100 px-2 py-1">
+                  Client ID <code className="ml-1 text-slate-700">{app.id}</code>
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-1">
+                  Key <code className="ml-1 text-slate-700">{app.key}</code>
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(app.key)}
+                    className="ml-2 align-middle text-slate-400 hover:text-brand"
+                    aria-label="Copy application key"
+                  >
+                    <Copy className="inline h-3.5 w-3.5" />
+                  </button>
+                </span>
+                <span className="rounded-full bg-slate-100 px-2 py-1">Mode {authModeLabel(app.authorization_mode)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/developer" className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50">
+              <BookOpen className="h-4 w-4" />
+              Docs
+            </Link>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMenuOpen((open) => !open)}
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+                More
+                <ChevronDown className="h-4 w-4" />
+              </button>
+              {menuOpen ? (
+                <div className="absolute right-0 z-20 mt-2 w-56 rounded-md border border-line bg-white p-2 shadow-xl">
+                  {["active", "suspended", "archived"].map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      disabled={statusLoading || app.status === "archived"}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        void handleStatusChange(status);
+                      }}
+                      className="block w-full rounded-md px-3 py-2 text-left text-sm capitalize text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Set {status}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
         </div>
       </div>
 
-      {error ? (
-        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 flex items-center gap-2">
-          <ShieldAlert className="h-4 w-4" />
-          {error}
-        </div>
-      ) : null}
-
+      {error ? <div className="mb-4"><ErrorState message={error} /></div> : null}
       {success ? (
-        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-emerald-600" />
-          {success}
+        <div className="mb-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            {success}
+          </div>
+        </div>
+      ) : null}
+      {app.status === "suspended" ? (
+        <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="flex items-start gap-2">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            Application is suspended. Access and administrative mutations are restricted by lifecycle policy.
+          </div>
         </div>
       ) : null}
 
-      {/* Tabs Header */}
-      <div className="mb-6 border-b border-line">
-        <nav className="flex gap-6">
+      <div className="mb-6 overflow-x-auto border-b border-line">
+        <nav className="flex min-w-max gap-7">
           {tabs.map((tab) => {
-            const isActive = pathname === tab.href;
+            const active = pathname === tab.href;
             return (
               <Link
                 key={tab.name}
                 href={tab.href}
-                className={`pb-3 text-sm font-semibold transition-all border-b-2 -mb-px ${
-                  isActive ? "border-brand text-brand font-bold" : "border-transparent text-slate-600 hover:text-slate-900"
+                className={`-mb-px border-b-2 pb-3 text-sm font-semibold transition ${
+                  active ? "border-brand text-brand" : "border-transparent text-slate-600 hover:text-ink"
                 }`}
               >
                 {tab.name}
@@ -152,7 +192,7 @@ export default function ApplicationLayout({ children }: { children: React.ReactN
         </nav>
       </div>
 
-      <div>{children}</div>
+      {children}
     </Shell>
   );
 }

@@ -48,8 +48,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         url: `${process.env.AUTH_IITD_PUBLIC_ISSUER ?? process.env.AUTH_IITD_ISSUER}/protocol/openid-connect/auth`,
         params: { scope: "openid profile email" }
       },
+      checks: ["pkce", "state"],
       clientId: process.env.AUTH_IITD_CLIENT_ID,
-      clientSecret: process.env.AUTH_IITD_CLIENT_SECRET,
+      ...(process.env.AUTH_IITD_CLIENT_SECRET
+        ? { clientSecret: process.env.AUTH_IITD_CLIENT_SECRET }
+        : { client: { token_endpoint_auth_method: "none" } }),
     }
   ],
   callbacks: {
@@ -69,4 +72,3 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }
   }
 });
-

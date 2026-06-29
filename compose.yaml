@@ -10,7 +10,7 @@ services:
     volumes:
       - iam-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U iam -d iam"]
+      test: [ "CMD-SHELL", "pg_isready -U iam -d iam" ]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -24,27 +24,27 @@ services:
     volumes:
       - keycloak-postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      test: [ "CMD-SHELL", "pg_isready -U keycloak -d keycloak" ]
       interval: 10s
       timeout: 5s
       retries: 10
 
   redis:
     image: redis:7-alpine
-    command: ["redis-server", "--appendonly", "yes"]
+    command: [ "redis-server", "--appendonly", "yes" ]
     ports:
       - "6379:6379"
     volumes:
       - iam-redis:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 10
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
-    command: ["start-dev", "--import-realm"]
+    command: [ "start-dev", "--import-realm" ]
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
@@ -71,8 +71,9 @@ services:
       IAM_DATABASE_URL: postgresql://iam:${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}@postgres:5432/iam
       IAM_REDIS_URL: redis://redis:6379/0
       IAM_KEYCLOAK_BASE_URL: http://keycloak:8080
-      IAM_OIDC_ISSUER: http://localhost:8080/realms/iitd-iam-admin
-      IAM_OIDC_JWKS_URL: http://keycloak:8080/realms/iitd-iam-admin/protocol/openid-connect/certs
+      IAM_OIDC_ISSUER: http://localhost:8080/realms/iitd
+      IAM_OIDC_JWKS_URL: http://keycloak:8080/realms/iitd/protocol/openid-connect/certs
+      IAM_OIDC_AUDIENCE: account
       IAM_ALLOW_DEV_AUTH: "true"
       PORT: "8000"
     ports:
@@ -89,14 +90,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.api
-    command: ["alembic", "upgrade", "head"]
+    command: [ "alembic", "upgrade", "head" ]
     working_dir: /app
     environment:
       IAM_DATABASE_URL: postgresql://iam:${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}@postgres:5432/iam
     depends_on:
       postgres:
         condition: service_healthy
-    profiles: ["tools"]
+    profiles: [ "tools" ]
 
   iam-admin:
     build:
