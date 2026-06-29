@@ -27,15 +27,15 @@ Completed work:
 - Production configuration validation and tests added.
 - Keycloak admin client typed methods and tests added.
 - Consistency and reconciliation strategy documented.
+- End-to-end invitation acceptance flow completed with atomic transactions and role assignment.
 
 Incomplete work:
 
 - Full Keycloak admin operations.
-- Keycloak admin methods are not yet wired into IAM business services/routes or live-tested.
+- Keycloak admin methods are not yet wired into all IAM business services/routes.
 - Live validation of automatic OIDC sign-in in admin UI against Netlify and Keycloak callback settings.
 - Complete CRUD endpoints for every specified action.
 - Email/GNS integration.
-- End-to-end invitation acceptance.
 - Service-account secret manager integration.
 - Integration, E2E, load and security scan execution.
 - Staging and production deployment verification.
@@ -49,11 +49,11 @@ Branch: `uat`.
 
 Last commit: `ea2f1ed Add OIDC bearer token integration bridge` before the current Auth.js commit.
 
-Migrations: `backend/alembic/versions/0001_initial_schema.py`.
+Migrations: `backend/alembic/versions/0001_initial_schema.py`, `backend/alembic/versions/0002_role_assignment_uniqueness.py`.
 
 Running services: not started by this session.
 
-Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 26 passed. Latest frontend build includes `ƒ /api/auth/[...nextauth]`.
+Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 46 passed. Latest frontend build includes `ƒ /api/auth/[...nextauth]`.
 
 Security status: foundation controls implemented; production verification incomplete.
 
