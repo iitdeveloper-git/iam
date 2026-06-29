@@ -14,8 +14,8 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:3030/*"],
-      "webOrigins": ["http://localhost:3030"]
+      "redirectUris": ["http://localhost:3030/*", "https://*.iitdeveloper.com/*", "https://iitdeveloper.com/*"],
+      "webOrigins": ["http://localhost:3030", "https://*.iitdeveloper.com", "https://iitdeveloper.com"]
     }
   ],
   "roles": {
