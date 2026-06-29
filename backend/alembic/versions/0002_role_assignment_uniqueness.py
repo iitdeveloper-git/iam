@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy import text
 
 revision = "0002_role_assignment_uniqueness"
-down_revision = "0001_initial_schema"
+down_revision = "cb8255c90c1b"
 branch_labels = None
 depends_on = None
 

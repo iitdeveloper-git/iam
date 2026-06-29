@@ -185,8 +185,9 @@ class Role(Base):
     key: Mapped[str] = mapped_column(String(120))
     name: Mapped[str] = mapped_column(String(160))
     description: Mapped[str | None] = mapped_column(Text)
-    scope: Mapped[RoleScope] = mapped_column(Enum(RoleScope))
+    scope: Mapped[RoleScope] = mapped_column(Enum(RoleScope, native_enum=False))
     is_system: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

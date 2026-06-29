@@ -83,3 +83,18 @@ Files: `frontend/`, `backend/src/iitd_iam/auth/`.
 Tests: E2E login smoke test.
 
 Status: TODO
+
+## IAM-007
+
+Description: Application RBAC UI and backend gaps.
+
+Acceptance criteria: application lifecycle administration, active/disabled roles management, permission replacement, access grant revocation cascades, and GNS CLI bootstrap.
+
+Dependencies: IAM-003.
+
+Files: `backend/`, `frontend/`, `docs/`, migration.
+
+Tests: `pytest tests/test_app_rbac.py` and frontend builds.
+
+Status: DONE
+

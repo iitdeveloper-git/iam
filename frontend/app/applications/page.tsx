@@ -9,8 +9,10 @@ import {
   createApplication 
 } from "@/lib/api/client";
 import { Plus, X, Globe, ShieldAlert, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function ApplicationsPage() {
+  const router = useRouter();
   const [applications, setApplications] = useState<Application[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -115,8 +117,14 @@ export default function ApplicationsPage() {
           <div key={`${app.id}-name`} className="font-semibold text-ink">{app.name}</div>,
           <code key={`${app.id}-key`} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-800 font-mono">{app.key}</code>,
           getAuthModeLabel(app.authorization_mode),
-          <span key={`${app.id}-status`} className="inline-flex rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">Active</span>
+          <span key={`${app.id}-status`} className="inline-flex rounded bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">{app.status}</span>
         ])}
+        onRowClick={(index) => {
+          const app = applications[index];
+          if (app) {
+            router.push(`/applications/${app.id}`);
+          }
+        }}
       />
 
       {/* Backdrop & Registration Modal */}

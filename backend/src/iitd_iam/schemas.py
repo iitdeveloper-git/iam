@@ -171,9 +171,16 @@ class RoleOut(BaseModel):
     scope: RoleScope
     application_id: UUID | None
     is_system: bool
+    is_active: bool
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class RoleUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    is_active: bool | None = None
 
 
 # ---------------------------------------------------------------------------

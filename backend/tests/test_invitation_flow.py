@@ -11,7 +11,6 @@ require TEST_DATABASE_URL pointing to a real PostgreSQL instance.
 
 from __future__ import annotations
 
-import os
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from secrets import token_urlsafe
@@ -21,22 +20,10 @@ from uuid import uuid4
 import pytest
 import pytest_asyncio
 from pydantic import PostgresDsn
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import StaticPool
 
-# ---------------------------------------------------------------------------
-# Local Base — avoids importing iitd_iam.database which calls get_settings()
-# at module level with a PostgreSQL URL we don't have in tests.
-# ---------------------------------------------------------------------------
-class Base(DeclarativeBase):
-    pass
-
-
-# Now import models (they use iitd_iam.database.Base, so we monkey-patch first)
-import iitd_iam.database as _db_module
-_db_module.Base = Base  # type: ignore[attr-defined]
+from iitd_iam.database import Base
 
 from iitd_iam.models import (  # noqa: E402
     Application,
@@ -47,7 +34,6 @@ from iitd_iam.models import (  # noqa: E402
     GrantStatus,
     Invitation,
     InvitationStatus,
-    Permission,
     Role,
     RoleScope,
     User,
