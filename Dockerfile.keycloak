@@ -1,5 +1,6 @@
 FROM quay.io/keycloak/keycloak:25.0.6
 
+# This Dockerfile is uploaded to the standalone Hugging Face Keycloak Space.
 # Copy realm configuration for importing on startup
 COPY ./docker/keycloak/realm-iitd.json /opt/keycloak/data/import/realm-iitd.json
 
