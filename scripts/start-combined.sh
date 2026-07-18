@@ -214,7 +214,7 @@ HTTP_STATUS=$(curl \
 "$KEYCLOAK_READY_URL" || true)
 
 case "$HTTP_STATUS" in
-200|401|403|429)
+200|301|302|303|307|308|401|403|429)
 KEYCLOAK_READY=true
 echo "Keycloak is reachable with HTTP ${HTTP_STATUS}."
 break
