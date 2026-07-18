@@ -37,6 +37,24 @@ require_env IAM_OIDC_ISSUER
 require_env IAM_OIDC_JWKS_URL
 require_env IAM_OIDC_AUDIENCE
 
+export IAM_KEYCLOAK_BASE_URL="${IAM_KEYCLOAK_BASE_URL:-http://127.0.0.1:8080}"
+export IAM_EMBEDDED_KEYCLOAK="${IAM_EMBEDDED_KEYCLOAK:-auto}"
+
+if [[ "$IAM_EMBEDDED_KEYCLOAK" == "auto" ]]; then
+case "$IAM_KEYCLOAK_BASE_URL" in
+http://127.0.0.1:*|http://localhost:*)
+IAM_EMBEDDED_KEYCLOAK="true"
+;;
+*)
+IAM_EMBEDDED_KEYCLOAK="false"
+;;
+esac
+fi
+
+echo "Validating Nginx configuration..."
+nginx -t
+
+if [[ "$IAM_EMBEDDED_KEYCLOAK" == "true" ]]; then
 # Keycloak database configuration
 
 require_env KC_DB_URL
@@ -52,14 +70,7 @@ export KC_PROXY_HEADERS="${KC_PROXY_HEADERS:-xforwarded}"
 export KC_HOSTNAME="${KC_HOSTNAME:-https://iitdeveloper-iam.hf.space}"
 export KC_HOSTNAME_STRICT="${KC_HOSTNAME_STRICT:-false}"
 
-export IAM_KEYCLOAK_BASE_URL="${IAM_KEYCLOAK_BASE_URL:-http://127.0.0.1:8080}"
-
-echo "Validating Nginx configuration..."
-nginx -t
-
-echo "Starting Keycloak on port 8080..."
-
-# KC_DB_URL should already contain:
+echo "Starting embedded Keycloak on port 8080..."
 
 # jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
 
@@ -68,16 +79,23 @@ echo "Starting Keycloak on port 8080..."
 --import-realm &
 
 KEYCLOAK_PID=$!
+KEYCLOAK_READY_URL="http://127.0.0.1:8080/realms/iitd/.well-known/openid-configuration"
+else
+echo "Using external Keycloak at ${IAM_KEYCLOAK_BASE_URL}; embedded Keycloak startup skipped."
+KEYCLOAK_READY_URL="${IAM_OIDC_ISSUER%/}/.well-known/openid-configuration"
+fi
 
 echo "Waiting for Keycloak..."
 
 KEYCLOAK_READY=false
 
 for attempt in $(seq 1 90); do
+if [[ -n "$KEYCLOAK_PID" ]]; then
 if ! kill -0 "$KEYCLOAK_PID" 2>/dev/null; then
 echo "Keycloak exited during startup." >&2
 wait "$KEYCLOAK_PID" || true
 exit 1
+fi
 fi
 
 if curl \
@@ -85,7 +103,7 @@ if curl \
 --silent \
 --show-error \
 --max-time 5 \
-"http://127.0.0.1:8080/realms/iitd/.well-known/openid-configuration" \
+"$KEYCLOAK_READY_URL" \
 >/dev/null; then
 KEYCLOAK_READY=true
 echo "Keycloak is ready."
@@ -170,7 +188,11 @@ echo "Public URL: https://iitdeveloper-iam.hf.space"
 # Stop the container if Keycloak, FastAPI, or Nginx exits.
 
 set +e
+if [[ -n "$KEYCLOAK_PID" ]]; then
 wait -n "$KEYCLOAK_PID" "$API_PID" "$NGINX_PID"
+else
+wait -n "$API_PID" "$NGINX_PID"
+fi
 EXIT_CODE=$?
 set -e
 
