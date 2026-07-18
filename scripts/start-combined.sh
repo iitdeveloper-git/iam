@@ -141,8 +141,13 @@ sleep "$KEYCLOAK_WAIT_SLEEP"
 done
 
 if [[ "$KEYCLOAK_READY" != "true" ]]; then
+if [[ "$IAM_EMBEDDED_KEYCLOAK" != "true" ]]; then
+echo "External Keycloak did not answer readiness checks; continuing IAM startup." >&2
+echo "OIDC login may fail until ${KEYCLOAK_READY_URL} is reachable from the Space." >&2
+else
 echo "Keycloak did not become ready within 180 seconds." >&2
 exit 1
+fi
 fi
 
 echo "Applying IAM database migrations..."
