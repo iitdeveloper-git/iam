@@ -66,7 +66,7 @@ def create_app() -> FastAPI:
         try:
             issuer_path = settings.oidc_issuer.path or ""
             discovery = f"{str(settings.keycloak_base_url).rstrip('/')}{issuer_path}/.well-known/openid-configuration"
-            async with httpx.AsyncClient(timeout=5.0) as client:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
                 response = await client.get(discovery)
                 response.raise_for_status()
             checks["keycloak"] = "ok"

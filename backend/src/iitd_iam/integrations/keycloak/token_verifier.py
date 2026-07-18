@@ -47,7 +47,7 @@ class TokenVerifier:
 
         async with httpx.AsyncClient(
             timeout=timeout,
-            follow_redirects=False,
+            follow_redirects=True,
         ) as client:
             response = await client.get(
                 self.jwks_url,
