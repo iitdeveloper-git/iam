@@ -19,7 +19,7 @@ Current verdict: `Production-ready candidate (UAT phase complete)`.
 pytest backend/tests: 26 passed
 ruff check backend/src backend/tests: passed
 npm run typecheck: passed
-npm run build: passed
+npm run build: passebackend/src/iitd_iam/cli.pyd
 npm audit --audit-level=moderate: 0 vulnerabilities
 ```
 

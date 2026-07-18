@@ -144,12 +144,12 @@ export default function ApplicationRolesPage() {
     );
   };
 
-  // Group permissions by resource prefix e.g. gns.templates
+  // Group permissions by type and resource
   const groupPermissions = () => {
     const groups: Record<string, Permission[]> = {};
     permissions.forEach((perm) => {
-      const parts = perm.key.split(".");
-      const groupName = parts.length > 1 ? parts[0] + "." + parts[1] : parts[0] || "Global";
+      const typeLabel = perm.application_id ? "Application" : "Platform";
+      const groupName = `${typeLabel} - ${perm.resource || "Global"}`;
       if (!groups[groupName]) {
         groups[groupName] = [];
       }
@@ -159,6 +159,7 @@ export default function ApplicationRolesPage() {
   };
 
   const isReadOnly = app?.status === "suspended" || app?.status === "archived";
+
 
   return (
     <div className="space-y-4">
@@ -313,22 +314,26 @@ export default function ApplicationRolesPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {groupPerms.map((perm) => {
                       const isChecked = mappedPermIds.includes(perm.id);
+                      const isDisabled = isReadOnly || !perm.is_active;
                       return (
                         <label
                           key={perm.id}
-                          className={`flex items-start gap-2.5 rounded-md border p-3 cursor-pointer hover:bg-slate-50 transition ${
-                            isChecked ? "border-brand bg-brand/5" : "border-line"
-                          }`}
+                          className={`flex items-start gap-2.5 rounded-md border p-3 transition ${
+                            !perm.is_active ? "opacity-60 cursor-not-allowed bg-slate-50" : "cursor-pointer hover:bg-slate-50"
+                          } ${isChecked ? "border-brand bg-brand/5" : "border-line"}`}
                         >
                           <input
                             type="checkbox"
                             checked={isChecked}
-                            disabled={isReadOnly}
+                            disabled={isDisabled}
                             onChange={() => handleTogglePermissionId(perm.id)}
-                            className="mt-0.5 rounded border-line text-brand focus:ring-brand"
+                            className="mt-0.5 rounded border-line text-brand focus:ring-brand disabled:opacity-50"
                           />
-                          <div>
-                            <div className="text-xs font-bold text-ink font-mono">{perm.key}</div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <div className="text-xs font-bold text-ink font-mono">{perm.key}</div>
+                              {!perm.is_active && <span className="text-[9px] font-bold text-red-600 uppercase tracking-wider bg-red-50 px-1.5 py-0.5 rounded">Disabled</span>}
+                            </div>
                             <div className="text-[10px] text-slate-500 mt-0.5">{perm.description}</div>
                           </div>
                         </label>

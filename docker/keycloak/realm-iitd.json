@@ -14,19 +14,41 @@
       "publicClient": true,
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
-      "redirectUris": ["http://localhost:3030/*", "https://*.iitdeveloper.com/*", "https://iitdeveloper.com/*"],
-      "webOrigins": ["http://localhost:3030", "https://*.iitdeveloper.com", "https://iitdeveloper.com"]
+      "redirectUris": [
+        "http://localhost:3030/*",
+        "https://*.iitdeveloper.com/*",
+        "https://iitdeveloper.com/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3030",
+        "https://*.iitdeveloper.com",
+        "https://iitdeveloper.com"
+      ]
     }
   ],
   "roles": {
     "realm": [
-      { "name": "super_admin" },
-      { "name": "platform_admin" },
-      { "name": "security_admin" },
-      { "name": "application_admin" },
-      { "name": "support_operator" },
-      { "name": "auditor" },
-      { "name": "user" }
+      {
+        "name": "super_admin"
+      },
+      {
+        "name": "platform_admin"
+      },
+      {
+        "name": "security_admin"
+      },
+      {
+        "name": "application_admin"
+      },
+      {
+        "name": "support_operator"
+      },
+      {
+        "name": "auditor"
+      },
+      {
+        "name": "user"
+      }
     ]
   }
 }

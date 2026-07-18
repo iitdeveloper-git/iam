@@ -202,10 +202,28 @@ class Permission(Base):
     key: Mapped[str] = mapped_column(String(160))
     name: Mapped[str] = mapped_column(String(160))
     description: Mapped[str | None] = mapped_column(Text)
+    resource: Mapped[str] = mapped_column(String(160))
+    action: Mapped[str] = mapped_column(String(160))
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    __table_args__ = (UniqueConstraint("application_id", "key", name="uq_permission_app_key"),)
+    __table_args__ = (
+        Index(
+            "uq_application_permission_key",
+            "application_id", "key",
+            unique=True,
+            postgresql_where=text("application_id IS NOT NULL"),
+            sqlite_where=text("application_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_platform_permission_key",
+            "key",
+            unique=True,
+            postgresql_where=text("application_id IS NULL"),
+            sqlite_where=text("application_id IS NULL"),
+        ),
+    )
 
 
 class RolePermission(Base):
