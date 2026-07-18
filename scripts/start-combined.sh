@@ -88,6 +88,7 @@ fi
 echo "Waiting for Keycloak..."
 
 KEYCLOAK_READY=false
+KEYCLOAK_WAIT_MAX_TIME="${KEYCLOAK_WAIT_MAX_TIME:-20}"
 
 for attempt in $(seq 1 90); do
 if [[ -n "$KEYCLOAK_PID" ]]; then
@@ -102,7 +103,7 @@ if curl \
 --fail \
 --silent \
 --show-error \
---max-time 5 \
+--max-time "$KEYCLOAK_WAIT_MAX_TIME" \
 "$KEYCLOAK_READY_URL" \
 >/dev/null; then
 KEYCLOAK_READY=true
