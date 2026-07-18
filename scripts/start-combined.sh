@@ -52,7 +52,7 @@ export KC_PROXY_HEADERS="${KC_PROXY_HEADERS:-xforwarded}"
 export KC_HOSTNAME="${KC_HOSTNAME:-https://iitdeveloper-iam.hf.space}"
 export KC_HOSTNAME_STRICT="${KC_HOSTNAME_STRICT:-false}"
 
-export IAM_KEYCLOAK_BASE_URL="${IAM_KEYCLOAK_BASE_URL:-[http://127.0.0.1:8080}](http://127.0.0.1:8080})"
+export IAM_KEYCLOAK_BASE_URL="${IAM_KEYCLOAK_BASE_URL:-http://127.0.0.1:8080}"
 
 echo "Validating Nginx configuration..."
 nginx -t
@@ -63,8 +63,8 @@ echo "Starting Keycloak on port 8080..."
 
 # jdbc:postgresql://aws-1-ap-southeast-1.pooler.supabase.com:6543/postgres?prepareThreshold=0
 
-/opt/keycloak/bin/kc.sh start 
---http-port=8080 
+/opt/keycloak/bin/kc.sh start --optimized \
+--http-port=8080 \
 --import-realm &
 
 KEYCLOAK_PID=$!
@@ -80,12 +80,12 @@ wait "$KEYCLOAK_PID" || true
 exit 1
 fi
 
-if curl 
---fail 
---silent 
---show-error 
---max-time 5 
-"http://127.0.0.1:8080/realms/iitd/.well-known/openid-configuration" 
+if curl \
+--fail \
+--silent \
+--show-error \
+--max-time 5 \
+"http://127.0.0.1:8080/realms/iitd/.well-known/openid-configuration" \
 >/dev/null; then
 KEYCLOAK_READY=true
 echo "Keycloak is ready."
@@ -110,10 +110,10 @@ echo "IAM migrations completed."
 
 echo "Starting FastAPI on port 8000..."
 
-uvicorn iitd_iam.main:app 
---host 127.0.0.1 
---port 8000 
---proxy-headers 
+uvicorn iitd_iam.main:app \
+--host 127.0.0.1 \
+--port 8000 \
+--proxy-headers \
 --forwarded-allow-ips="127.0.0.1" &
 
 API_PID=$!
@@ -129,12 +129,12 @@ wait "$API_PID" || true
 exit 1
 fi
 
-if curl 
---fail 
---silent 
---show-error 
---max-time 5 
-"http://127.0.0.1:8000/health/live" 
+if curl \
+--fail \
+--silent \
+--show-error \
+--max-time 5 \
+"http://127.0.0.1:8000/health/live" \
 >/dev/null; then
 API_READY=true
 echo "FastAPI is ready."

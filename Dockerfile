@@ -7,10 +7,10 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Download and extract Keycloak 25
+# Download and extract Keycloak 25.0.6 to match the migrated production database.
 WORKDIR /opt
-RUN curl -L https://github.com/keycloak/keycloak/releases/download/25.0.0/keycloak-25.0.0.tar.gz | tar xz \
-    && mv keycloak-25.0.0 keycloak
+RUN curl -L https://github.com/keycloak/keycloak/releases/download/25.0.6/keycloak-25.0.6.tar.gz | tar xz \
+    && mv keycloak-25.0.6 keycloak
 
 # Set working directory for application
 WORKDIR /app
@@ -23,6 +23,15 @@ ENV PYTHONPATH=/app/src
 # Copy Keycloak resources and configurations
 COPY ./docker/keycloak/realm-iitd.json /opt/keycloak/data/import/realm-iitd.json
 COPY ./keycloak/themes/iitd /opt/keycloak/themes/iitd
+
+# Build the optimized Keycloak server image at Docker build time so Hugging Face
+# startup does not spend every cold start running Quarkus augmentation.
+ENV KC_DB=postgres
+ENV KC_HEALTH_ENABLED=true
+ENV KC_METRICS_ENABLED=false
+ENV KC_HTTP_ENABLED=true
+ENV KC_PROXY_HEADERS=xforwarded
+RUN /opt/keycloak/bin/kc.sh build
 
 # Copy Nginx router config
 COPY nginx.conf /etc/nginx/nginx.conf
