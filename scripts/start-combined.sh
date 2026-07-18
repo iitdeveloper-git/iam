@@ -37,6 +37,102 @@ require_env IAM_OIDC_ISSUER
 require_env IAM_OIDC_JWKS_URL
 require_env IAM_OIDC_AUDIENCE
 
+write_nginx_config() {
+local keycloak_base_url="${IAM_KEYCLOAK_BASE_URL%/}"
+
+if [[ "$IAM_EMBEDDED_KEYCLOAK" == "true" ]]; then
+cat >/etc/nginx/nginx.conf <<'NGINX'
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+    keepalive_timeout  65;
+
+    server {
+        listen 7860;
+        server_name localhost;
+
+        location /admin {
+            proxy_pass http://127.0.0.1:8080/admin;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /realms {
+            proxy_pass http://127.0.0.1:8080/realms;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /resources {
+            proxy_pass http://127.0.0.1:8080/resources;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /js {
+            proxy_pass http://127.0.0.1:8080/js;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location / {
+            proxy_pass http://127.0.0.1:8000/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+}
+NGINX
+else
+cat >/etc/nginx/nginx.conf <<NGINX
+events {
+    worker_connections 1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+    keepalive_timeout  65;
+
+    server {
+        listen 7860;
+        server_name localhost;
+
+        location ~ ^/(admin|realms|resources|js)(/.*)?$ {
+            return 308 ${keycloak_base_url}\$request_uri;
+        }
+
+        location / {
+            proxy_pass http://127.0.0.1:8000/;
+            proxy_set_header Host \$host;
+            proxy_set_header X-Real-IP \$remote_addr;
+            proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto \$scheme;
+        }
+    }
+}
+NGINX
+fi
+}
+
 export IAM_KEYCLOAK_BASE_URL="${IAM_KEYCLOAK_BASE_URL:-http://127.0.0.1:8080}"
 export IAM_EMBEDDED_KEYCLOAK="${IAM_EMBEDDED_KEYCLOAK:-auto}"
 
@@ -50,6 +146,8 @@ IAM_EMBEDDED_KEYCLOAK="false"
 ;;
 esac
 fi
+
+write_nginx_config
 
 echo "Validating Nginx configuration..."
 nginx -t
