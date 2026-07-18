@@ -15,10 +15,10 @@ function customFetchInterceptor(
     urlStr = String(input);
   }
 
-  const publicIssuer = "http://localhost:8080";
-  const internalIssuer = "http://keycloak:8080";
+  const publicIssuer = process.env.AUTH_IITD_PUBLIC_ISSUER;
+  const internalIssuer = process.env.AUTH_IITD_ISSUER;
 
-  if (urlStr.startsWith(publicIssuer)) {
+  if (publicIssuer && internalIssuer && publicIssuer !== internalIssuer && urlStr.startsWith(publicIssuer)) {
     const rewrittenUrl = urlStr.replace(publicIssuer, internalIssuer);
     console.log(`[auth] customFetch: Rewriting request ${urlStr} -> ${rewrittenUrl}`);
     
