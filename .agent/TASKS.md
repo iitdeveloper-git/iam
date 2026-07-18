@@ -111,3 +111,47 @@ Files: `frontend/components/`, `frontend/app/`, `docs/IAM_008_UI_REVAMP.md`.
 Tests: `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`.
 
 Status: DONE
+
+## IAM-009
+
+Description:
+Implement dynamic application-scoped permission management through secure backend APIs and the IAM Admin Console.
+
+Acceptance criteria:
+- Authorized administrators can create, view, update, enable, and disable permissions within an application.
+- Permission keys are immutable after creation.
+- Permission keys are unique within the application.
+- Application administrators cannot manage permissions belonging to another application.
+- Platform permissions remain centrally controlled and cannot be modified through application-scoped APIs.
+- Disabled permissions cannot be newly assigned to roles and contribute no effective authorization.
+- Existing role-permission mappings remain auditable.
+- Permission hard deletion is not exposed.
+- Existing CLI/bootstrap permissions continue to work idempotently.
+- Backend tests, frontend tests, type checking, linting, builds, and migrations pass.
+
+Dependencies:
+- IAM-007
+- IAM-008
+- IAM-004 for production OIDC authentication
+
+Files:
+- backend/src/iitd_iam/models.py
+- backend/src/iitd_iam/schemas.py
+- backend/src/iitd_iam/api/v1/routes.py
+- backend/alembic/versions/
+- backend/tests/
+- frontend/app/applications/[id]/permissions/
+- frontend/components/
+- frontend/lib/api/client.ts
+- docs/
+
+Tests:
+- pytest
+- ruff check .
+- npm run lint
+- npm run typecheck
+- npm test
+- npm run build
+- Alembic migration verification where applicable
+
+Status: TODO

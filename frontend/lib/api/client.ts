@@ -248,9 +248,50 @@ export type Permission = {
   key: string;
   name: string;
   description: string | null;
+  resource: string;
+  action: string;
+  is_active: boolean;
   application_id: string | null;
   created_at: string;
+  updated_at: string;
 };
+
+export async function getApplicationScopedPermissions(appId: string, token?: string | null) {
+  return request<Permission[]>(`/applications/${appId}/permissions`, token);
+}
+
+export async function createPermission(
+  appId: string,
+  payload: { key: string; name: string; description?: string; resource: string; action: string },
+  token?: string | null
+) {
+  return request<Permission>(`/applications/${appId}/permissions`, token, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getPermission(appId: string, permissionId: string, token?: string | null) {
+  return request<Permission>(`/applications/${appId}/permissions/${permissionId}`, token);
+}
+
+export async function updatePermission(
+  appId: string,
+  permissionId: string,
+  payload: { name?: string; description?: string; is_active?: boolean },
+  token?: string | null
+) {
+  return request<Permission>(`/applications/${appId}/permissions/${permissionId}`, token, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function getPermissionRoles(appId: string, permissionId: string, token?: string | null) {
+  return request<Role[]>(`/applications/${appId}/permissions/${permissionId}/roles`, token);
+}
 
 export async function getRolePermissions(appId: string, roleId: string, token?: string | null) {
   return request<Permission[]>(`/applications/${appId}/roles/${roleId}/permissions`, token);

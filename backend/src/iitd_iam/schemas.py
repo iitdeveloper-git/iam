@@ -187,13 +187,31 @@ class RoleUpdate(BaseModel):
 # Permission
 # ---------------------------------------------------------------------------
 
+class PermissionCreate(BaseModel):
+    key: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]*[a-z0-9]$")
+    name: str
+    description: str | None = None
+    resource: str
+    action: str
+
+
+class PermissionUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    is_active: bool | None = None
+
+
 class PermissionOut(BaseModel):
     id: UUID
     key: str
     name: str
     description: str | None
+    resource: str
+    action: str
+    is_active: bool
     application_id: UUID | None
     created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 

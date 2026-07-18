@@ -82,12 +82,12 @@ async def session(engine):
     async with factory() as s:
         yield s
 
-def _principal(roles: set[str] = None, permissions: set[str] = None) -> CurrentPrincipal:
+def _principal(roles: set[str] = None, permissions: set[str] = None, user_id=None) -> CurrentPrincipal:
     return CurrentPrincipal(
         subject=str(uuid4()),
         issuer="https://keycloak.example.com/realms/iitd",
         email="admin@example.com",
-        user_id=uuid4(),
+        user_id=user_id or uuid4(),
         roles=roles or {"application_admin"},
         permissions=permissions or set(),
     )
@@ -401,3 +401,95 @@ async def test_gns_bootstrap_idempotency(session):
         .where(RolePermission.role_id == admin_role.id)
     )
     assert mappings_count_after == 13
+import pytest
+from uuid import uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
+from httpx import AsyncClient
+
+pytestmark = pytest.mark.asyncio
+
+
+# ===========================================================================
+# Tests for IAM-009 Dynamic Application-Scoped Permissions
+# ===========================================================================
+from iitd_iam.api.v1.routes import (
+    create_application_permission,
+    update_application_permission,
+    get_application_permission,
+    list_application_permissions,
+    update_role_permissions,
+    create_application_role,
+)
+from iitd_iam.schemas import PermissionCreate, PermissionUpdate, RoleCreate
+
+@pytest.mark.asyncio
+async def test_dynamic_permission_creation_and_update(session):
+    """Test creating, listing, and updating application permissions."""
+    app = await _make_app(session, "dyn-perm-app")
+    user = await _make_user(session, "admin@dyn.com")
+    principal = _principal(
+        permissions={"permissions.create", "permissions.view", "permissions.update", "roles.create", "roles.update"},
+        user_id=user.id
+    )
+
+    # Needs grant to pass verify_application_admin
+    grant = ApplicationAccessGrant(application_id=app.id, user_id=user.id, status=GrantStatus.active)
+    session.add(grant)
+    await session.commit()
+
+    # Create Permission
+    perm = await create_application_permission(
+        application_id=app.id,
+        payload=PermissionCreate(
+            key="docs.read",
+            name="Read Docs",
+            description="Allows reading docs",
+            resource="docs",
+            action="read"
+        ),
+        request=_mock_request(),
+        session=session,
+        principal=principal,
+    )
+    assert perm.key == "docs.read"
+    assert perm.is_active is True
+    assert perm.application_id == app.id
+
+    # List Permissions
+    perms = await list_application_permissions(application_id=app.id, session=session, principal=principal)
+    assert len(perms) == 1
+    assert perms[0].key == "docs.read"
+
+    # Update Permission (disable it)
+    updated = await update_application_permission(
+        application_id=app.id,
+        permission_id=perm.id,
+        payload=PermissionUpdate(is_active=False),
+        request=_mock_request(),
+        session=session,
+        principal=principal,
+    )
+    assert updated.is_active is False
+
+    # Create Role and try to assign disabled permission
+    role = await create_application_role(
+        application_id=app.id,
+        payload=RoleCreate(key="doc_reader", name="Reader"),
+        request=_mock_request(),
+        session=session,
+        principal=principal,
+    )
+
+    from iitd_iam.errors import ApiError
+    with pytest.raises(ApiError) as exc_info:
+        await update_role_permissions(
+            application_id=app.id,
+            role_id=role.id,
+            payload=[perm.id],
+            request=_mock_request(),
+            session=session,
+            principal=principal,
+        )
+    assert exc_info.value.status_code == 422
+    assert "disabled" in exc_info.value.message.lower()
+

@@ -50,7 +50,9 @@ from iitd_iam.schemas import (
     InvitationAcceptRequest,
     InvitationCreate,
     InvitationOut,
+    PermissionCreate,
     PermissionOut,
+    PermissionUpdate,
     RedirectUriCreate,
     RoleAssignmentCreate,
     RoleAssignmentOut,
@@ -890,6 +892,8 @@ async def update_role_permissions(
         if permission.application_id is not None:
             if permission.application_id != application_id:
                 raise ApiError("CROSS_APPLICATION_MAPPING_REJECTED", "Cannot map permissions from other applications.", status_code=422)
+            if not permission.is_active:
+                raise ApiError("DISABLED_PERMISSION", f"Permission '{permission.key}' is disabled and cannot be mapped.", status_code=422)
         else:
             if permission.key not in ASSIGNABLE_PLATFORM_PERMISSIONS:
                 raise ApiError("UNASSIGNABLE_PLATFORM_PERMISSION", f"Platform permission '{permission.key}' cannot be mapped to application roles.", status_code=422)
@@ -1086,6 +1090,167 @@ async def revoke_application_access_grant(
     )
     await session.commit()
     return {"status": "revoked"}
+
+
+# ---------------------------------------------------------------------------
+# Application-Scoped Permissions
+# ---------------------------------------------------------------------------
+
+@router.get("/applications/{application_id}/permissions", response_model=list[PermissionOut], dependencies=[Depends(require_permission("permissions.view"))])
+async def list_application_permissions(
+    application_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(current_principal),
+) -> list[PermissionOut]:
+    app = await session.get(Application, application_id)
+    if not app:
+        raise ApiError("APPLICATION_NOT_FOUND", "Application was not found.", status_code=404)
+    await verify_application_admin(principal, application_id, session)
+
+    stmt = select(Permission).where(Permission.application_id == application_id).order_by(Permission.created_at.desc())
+    return (await session.scalars(stmt)).all()
+
+@router.post("/applications/{application_id}/permissions", response_model=PermissionOut, dependencies=[Depends(require_permission("permissions.create"))])
+async def create_application_permission(
+    application_id: UUID,
+    payload: PermissionCreate,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(current_principal),
+) -> PermissionOut:
+    app = await session.get(Application, application_id)
+    if not app:
+        raise ApiError("APPLICATION_NOT_FOUND", "Application was not found.", status_code=404)
+    if app.status == ApplicationStatus.archived:
+        raise ApiError("APPLICATION_ARCHIVED", "Cannot create permission for an archived application.", status_code=422)
+    if app.status == ApplicationStatus.suspended:
+        raise ApiError("APPLICATION_SUSPENDED", "Cannot create permission for a suspended application.", status_code=409)
+
+    await verify_application_admin(principal, application_id, session)
+
+    normalized_key = payload.key.strip().lower()
+
+    existing = await session.scalar(select(Permission).where(Permission.application_id == application_id, Permission.key == normalized_key))
+    if existing:
+        raise ApiError("PERMISSION_ALREADY_EXISTS", f"Permission with key '{normalized_key}' already exists for this application.", status_code=409)
+
+    permission = Permission(
+        application_id=application_id,
+        key=normalized_key,
+        name=payload.name.strip(),
+        description=payload.description.strip() if payload.description else None,
+        resource=payload.resource.strip(),
+        action=payload.action.strip(),
+        is_active=True
+    )
+    session.add(permission)
+    await session.flush()
+
+    await log_audit_event(
+        session,
+        action="permission.created",
+        resource_type="permission",
+        resource_id=str(permission.id),
+        result="success",
+        principal=principal,
+        application_id=application_id,
+        after_summary={"key": permission.key, "name": permission.name},
+        request=request,
+    )
+    await session.commit()
+    return permission
+
+@router.get("/applications/{application_id}/permissions/{permission_id}", response_model=PermissionOut, dependencies=[Depends(require_permission("permissions.view"))])
+async def get_application_permission(
+    application_id: UUID,
+    permission_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(current_principal),
+) -> PermissionOut:
+    await verify_application_admin(principal, application_id, session)
+
+    permission = await session.get(Permission, permission_id)
+    if not permission or permission.application_id != application_id:
+        raise ApiError("PERMISSION_NOT_FOUND", "Permission was not found for this application.", status_code=404)
+
+    return permission
+
+@router.patch("/applications/{application_id}/permissions/{permission_id}", response_model=PermissionOut, dependencies=[Depends(require_permission("permissions.update"))])
+async def update_application_permission(
+    application_id: UUID,
+    permission_id: UUID,
+    payload: PermissionUpdate,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(current_principal),
+) -> PermissionOut:
+    app = await session.get(Application, application_id)
+    if not app:
+        raise ApiError("APPLICATION_NOT_FOUND", "Application was not found.", status_code=404)
+    if app.status == ApplicationStatus.archived:
+        raise ApiError("APPLICATION_ARCHIVED", "Cannot update permission for an archived application.", status_code=422)
+    if app.status == ApplicationStatus.suspended:
+        raise ApiError("APPLICATION_SUSPENDED", "Cannot update permission for a suspended application.", status_code=409)
+
+    await verify_application_admin(principal, application_id, session)
+
+    permission = await session.get(Permission, permission_id)
+    if not permission or permission.application_id != application_id:
+        raise ApiError("PERMISSION_NOT_FOUND", "Permission was not found for this application.", status_code=404)
+
+    before_summary = {"name": permission.name, "description": permission.description, "is_active": permission.is_active}
+    
+    if payload.name is not None:
+        permission.name = payload.name.strip()
+    if payload.description is not None:
+        permission.description = payload.description.strip()
+    
+    action_type = "permission.updated"
+    if payload.is_active is not None and payload.is_active != permission.is_active:
+        permission.is_active = payload.is_active
+        if payload.is_active:
+            action_type = "permission.enabled"
+        else:
+            action_type = "permission.disabled"
+
+    await session.flush()
+    after_summary = {"name": permission.name, "description": permission.description, "is_active": permission.is_active}
+
+    await log_audit_event(
+        session,
+        action=action_type,
+        resource_type="permission",
+        resource_id=str(permission.id),
+        result="success",
+        principal=principal,
+        application_id=application_id,
+        before_summary=before_summary,
+        after_summary=after_summary,
+        request=request,
+    )
+    await session.commit()
+    return permission
+
+@router.get("/applications/{application_id}/permissions/{permission_id}/roles", response_model=list[RoleOut], dependencies=[Depends(require_permission("roles.view"))])
+async def get_application_permission_roles(
+    application_id: UUID,
+    permission_id: UUID,
+    session: AsyncSession = Depends(get_session),
+    principal: CurrentPrincipal = Depends(current_principal),
+) -> list[RoleOut]:
+    await verify_application_admin(principal, application_id, session)
+
+    permission = await session.get(Permission, permission_id)
+    if not permission or permission.application_id != application_id:
+        raise ApiError("PERMISSION_NOT_FOUND", "Permission was not found for this application.", status_code=404)
+
+    roles = (await session.scalars(
+        select(Role)
+        .join(RolePermission, RolePermission.role_id == Role.id)
+        .where(RolePermission.permission_id == permission_id)
+    )).all()
+    
+    return roles
 
 
 # ---------------------------------------------------------------------------

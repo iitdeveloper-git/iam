@@ -1,4 +1,4 @@
-FROM quay.io/keycloak/keycloak:25.0
+FROM quay.io/keycloak/keycloak:25.0.6
 
 # Copy realm configuration for importing on startup
 COPY ./docker/keycloak/realm-iitd.json /opt/keycloak/data/import/realm-iitd.json
@@ -6,8 +6,16 @@ COPY ./docker/keycloak/realm-iitd.json /opt/keycloak/data/import/realm-iitd.json
 # Copy custom login themes
 COPY ./keycloak/themes/iitd /opt/keycloak/themes/iitd
 
+# Build an optimized Keycloak image at Docker build time.
+ENV KC_DB=postgres
+ENV KC_HEALTH_ENABLED=true
+ENV KC_METRICS_ENABLED=false
+ENV KC_HTTP_ENABLED=true
+ENV KC_PROXY_HEADERS=xforwarded
+RUN /opt/keycloak/bin/kc.sh build
+
 # Configure Keycloak HTTP port to match Hugging Face standard
 EXPOSE 7860
 
-# Run Keycloak start-dev command with proxy headers enabled for Hugging Face
-ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start-dev", "--http-port=7860", "--import-realm", "--proxy-headers=xforwarded"]
+# Run optimized Keycloak with proxy headers enabled for Hugging Face.
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start", "--optimized", "--http-port=7860", "--import-realm"]
