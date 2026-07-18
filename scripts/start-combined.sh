@@ -90,11 +90,14 @@ echo "Waiting for Keycloak..."
 KEYCLOAK_READY=false
 KEYCLOAK_WAIT_MAX_TIME="${KEYCLOAK_WAIT_MAX_TIME:-20}"
 KEYCLOAK_WAIT_SLEEP="${KEYCLOAK_WAIT_SLEEP:-2}"
+KEYCLOAK_WAIT_ATTEMPTS="${KEYCLOAK_WAIT_ATTEMPTS:-90}"
 if [[ "$IAM_EMBEDDED_KEYCLOAK" != "true" ]]; then
-KEYCLOAK_WAIT_SLEEP="${KEYCLOAK_WAIT_SLEEP_EXTERNAL:-10}"
+KEYCLOAK_WAIT_MAX_TIME="${KEYCLOAK_WAIT_MAX_TIME_EXTERNAL:-5}"
+KEYCLOAK_WAIT_SLEEP="${KEYCLOAK_WAIT_SLEEP_EXTERNAL:-5}"
+KEYCLOAK_WAIT_ATTEMPTS="${KEYCLOAK_WAIT_ATTEMPTS_EXTERNAL:-3}"
 fi
 
-for attempt in $(seq 1 90); do
+for attempt in $(seq 1 "$KEYCLOAK_WAIT_ATTEMPTS"); do
 if [[ -n "$KEYCLOAK_PID" ]]; then
 if ! kill -0 "$KEYCLOAK_PID" 2>/dev/null; then
 echo "Keycloak exited during startup." >&2
@@ -136,7 +139,7 @@ break
 fi
 fi
 
-echo "Waiting for Keycloak (${attempt}/90)..."
+echo "Waiting for Keycloak (${attempt}/${KEYCLOAK_WAIT_ATTEMPTS})..."
 sleep "$KEYCLOAK_WAIT_SLEEP"
 done
 
