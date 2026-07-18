@@ -89,6 +89,10 @@ echo "Waiting for Keycloak..."
 
 KEYCLOAK_READY=false
 KEYCLOAK_WAIT_MAX_TIME="${KEYCLOAK_WAIT_MAX_TIME:-20}"
+KEYCLOAK_WAIT_SLEEP="${KEYCLOAK_WAIT_SLEEP:-2}"
+if [[ "$IAM_EMBEDDED_KEYCLOAK" != "true" ]]; then
+KEYCLOAK_WAIT_SLEEP="${KEYCLOAK_WAIT_SLEEP_EXTERNAL:-10}"
+fi
 
 for attempt in $(seq 1 90); do
 if [[ -n "$KEYCLOAK_PID" ]]; then
@@ -99,6 +103,26 @@ exit 1
 fi
 fi
 
+if [[ "$IAM_EMBEDDED_KEYCLOAK" != "true" ]]; then
+HTTP_STATUS=$(curl \
+--silent \
+--show-error \
+--max-time "$KEYCLOAK_WAIT_MAX_TIME" \
+--output /dev/null \
+--write-out "%{http_code}" \
+"$KEYCLOAK_READY_URL" || true)
+
+case "$HTTP_STATUS" in
+200|401|403|429)
+KEYCLOAK_READY=true
+echo "Keycloak is reachable with HTTP ${HTTP_STATUS}."
+break
+;;
+*)
+echo "Keycloak readiness returned HTTP ${HTTP_STATUS:-000}."
+;;
+esac
+else
 if curl \
 --fail \
 --silent \
@@ -110,9 +134,10 @@ KEYCLOAK_READY=true
 echo "Keycloak is ready."
 break
 fi
+fi
 
 echo "Waiting for Keycloak (${attempt}/90)..."
-sleep 2
+sleep "$KEYCLOAK_WAIT_SLEEP"
 done
 
 if [[ "$KEYCLOAK_READY" != "true" ]]; then
