@@ -1,6 +1,6 @@
 # Feature Completion Matrix
 
-This matrix is the audit source of truth for IITD IAM V1 status as of the current `uat` branch.
+This matrix is the audit source of truth for IITD IAM V1 status as of 2026-07-20 on `main`.
 
 Status meanings:
 
@@ -11,16 +11,18 @@ Status meanings:
 
 ## Executive Status
 
-IITD IAM is **not 110% production ready** yet.
+IITD IAM is **live UAT ready**, but it is **not 110% production signed off** yet.
 
 Current state:
 
-- Backend is deployed and exposes OpenAPI.
-- Admin UI is TypeScript/Next.js and Netlify-ready.
-- Backend supports OIDC bearer-token verification.
-- Admin UI includes Auth.js OIDC sign-in code and a bearer-token UAT fallback.
+- Backend is deployed on Hugging Face and exposes health/readiness APIs.
+- Keycloak is deployed on Hugging Face and OIDC discovery is reachable.
+- Admin UI is deployed on Netlify/custom domain.
+- Backend supports OIDC bearer-token verification and protected endpoints reject missing tokens.
+- Admin UI includes Auth.js OIDC sign-in and reuses the signed-in session access token for protected IAM API calls.
 - Core database models and initial migration exist.
-- Many production IAM workflows remain partial or not live-verified.
+- Live readiness currently reports PostgreSQL, Redis and Keycloak as `ok`.
+- Some production controls remain partial or not live-verified: full browser E2E, SMTP, MFA, backup/restore, load testing and scans.
 
 ## Product And Documentation
 
@@ -30,36 +32,36 @@ Current state:
 | FRD | DONE | `docs/product/FRD.md` | Expand acceptance detail as APIs mature |
 | User personas | DONE | `docs/product/USER_PERSONAS.md` | None for V1 foundation |
 | User flows | DONE | `docs/product/USER_FLOWS.md` | Add screenshots after UI stabilizes |
-| Acceptance criteria | PARTIAL | `docs/product/ACCEPTANCE_CRITERIA.md` | Mark criteria verified only after live E2E |
+| Acceptance criteria | PARTIAL | `docs/product/ACCEPTANCE_CRITERIA.md` | Mark all criteria verified only after browser E2E and operational drills |
 | Roadmap | DONE | `docs/product/ROADMAP.md` | Keep current |
-| Client integration docs | DONE | `docs/integration/` | Add final production URLs after launch |
+| Client integration docs | DONE | `docs/integration/` | Keep URLs current as domains change |
 | API matrix | DONE | `docs/integration/API_MATRIX.md` | Update as endpoints move from planned to complete |
 
 ## Architecture
 
 | Area | Status | Evidence | Remaining work |
 | --- | --- | --- | --- |
-| Keycloak-first architecture | DONE | ADR-001, architecture docs | Live Keycloak production hardening |
+| Keycloak-first architecture | DONE | ADR-001, architecture docs | Complete MFA/SMTP hardening |
 | Product authorization boundary | DONE | ADR-002 | Review with each product team |
-| Token and claim strategy | DONE | ADR-003, token docs | Live token mapper verification |
+| Token and claim strategy | DONE | ADR-003, token docs | App-specific role mapper verification |
 | Session strategy | PARTIAL | ADR-004 | Session projection and revocation live tests |
 | Secret management strategy | PARTIAL | ADR-005 | Real secret manager integration |
 | Database design | DONE | SQLAlchemy models, Alembic migration | Migration test against production-like PostgreSQL |
-| Deployment architecture | PARTIAL | Compose, HF/Netlify workflows | Live full-stack staging validation |
+| Deployment architecture | DONE | Compose, HF/Netlify workflows, live endpoints | Add rollback automation and runbooks |
 | Observability architecture | PARTIAL | `/metrics`, docs | Real logs/traces/alerts |
-| Production configuration validation | PARTIAL | `Settings` validators and tests | Verify HF/Netlify live runtime env |
+| Production configuration validation | PARTIAL | `Settings` validators and tests, live health | Formal env audit and secret rotation |
 
 ## Backend API
 
 | Feature | Status | Evidence | Remaining work |
 | --- | --- | --- | --- |
 | OpenAPI export | DONE | `openapi.json` | Regenerate before every release |
-| Health live | DONE | `/health/live` | None |
-| Health ready | DONE | `/health/ready` dynamically verified | None |
+| Health live | DONE | Live `/health/live` returned `200` | None |
+| Health ready | DONE | Live `/health/ready` returned `200`, all checks `ok` | None |
 | Metrics endpoint | DONE | `/metrics` | Add business metrics |
 | Stable error envelope | DONE | `ApiError` handler & `RequestValidationError` wrapping | None |
-| OIDC bearer verification | DONE | `TokenVerifier`, live Keycloak OIDC authentication | None |
-| Dev auth disabled in production | PARTIAL | settings validator | Independently verify production env |
+| OIDC bearer verification | DONE | `TokenVerifier`, signed JWT tests, protected live endpoints | Real browser token `/api/v1/me` E2E pending |
+| Dev auth disabled in production | PARTIAL | settings validator and protected endpoint `401` check | Formal production env audit |
 | Users list/create/get/suspend | DONE | routes & Keycloak user creation / suspension wired | Complete restore/sessions actions |
 | Applications list/create/get | DONE | routes & registry UI built | Complete patch/delete |
 | Environments create | DONE | routes & client provisioning sync wired | Promote logic |
@@ -79,7 +81,7 @@ Current state:
 | Feature | Status | Evidence | Remaining work |
 | --- | --- | --- | --- |
 | TypeScript Next.js app | DONE | `frontend/`, `npm run typecheck` | None |
-| Netlify-compatible build | DONE | `netlify.toml`, `npm run build` | Live Netlify deployment check |
+| Netlify-compatible build | DONE | `netlify.toml`, `npm run build`, live `/login` | None |
 | Dashboard | DONE | Dynamic system health counter UI | None |
 | Applications page | DONE | Create application modal and dynamic list | None |
 | Users page | DONE | User list, suspension, restoration, and session revocation actions | None |
@@ -87,8 +89,8 @@ Current state:
 | Security page | PARTIAL | UI shell exists | Wire policy and event data |
 | Audit page | DONE | Dynamic live audit log activity feed | None |
 | Developer page | PARTIAL | UI shell exists | Generate app-specific config |
-| Auth.js OIDC sign-in | DONE | `/api/auth/[...nextauth]` verified | Live callback verification |
-| Bearer-token UAT fallback | DONE | `AuthTokenPanel` | Remove or restrict after full SSO |
+| Auth.js OIDC sign-in | DONE | Auth.js provider, session token bridge, local CSRF POST redirect to Keycloak | Browser callback E2E on Netlify |
+| Bearer-token UAT fallback | DONE | `AuthTokenPanel` | Keep disabled/restricted outside UAT |
 
 ## Keycloak
 
@@ -111,12 +113,12 @@ Current state:
 | Docker API image | DONE | `Dockerfile.api` | Container scan |
 | Docker admin image | DONE | `Dockerfile.admin` | Optional if Netlify is primary |
 | Compose local stack | DONE | `compose.yaml` and podman local runs | None |
-| Hugging Face backend workflow | DONE | GitHub workflow | Confirm latest `uat` deploy |
-| Netlify frontend workflow | DONE | GitHub workflow | Confirm live Netlify deploy |
-| Production PostgreSQL | BLOCKED | env required | Configure managed database and run migrations |
-| Production Redis | BLOCKED | env required | Configure managed Redis |
-| Production Keycloak | BLOCKED | env/domain required | Configure realm, clients, SMTP, MFA |
-| DNS/TLS | BLOCKED | external | Configure production domains |
+| Hugging Face backend workflow | DONE | GitHub workflow and live health | Keep deploy logs attached to releases |
+| Netlify frontend workflow | DONE | GitHub workflow and live `/login` | Keep deploy logs attached to releases |
+| Production PostgreSQL | DONE | Live readiness `postgres=ok` | Backup/restore drill |
+| Production Redis | DONE | Live readiness `redis=ok` | Rate limiting/load verification |
+| Production Keycloak | PARTIAL | Live OIDC discovery and readiness `keycloak=ok` | SMTP, MFA and browser E2E |
+| DNS/TLS | DONE | `https://iam.iitdeveloper.com`, HF HTTPS URLs | Monitor certificate expiry |
 | Secret manager | BLOCKED | external | Configure provider and rotate secrets |
 | Production config fail-fast | PARTIAL | `backend/tests/test_production_config.py` | Live env verification |
 
@@ -133,7 +135,7 @@ Current state:
 | Frontend typecheck | DONE | `npm run typecheck` | Keep in CI |
 | Frontend build | DONE | `npm run build` | Keep in CI |
 | npm audit | DONE | 0 vulnerabilities | Keep in CI |
-| Integration tests | NOT_DONE | planned | Add PostgreSQL/Redis/Keycloak tests |
+| Integration tests | PARTIAL | Live HTTP checks | Add automated PostgreSQL/Redis/Keycloak integration suite |
 | E2E tests | NOT_DONE | planned | Add login, onboarding, invitation, service-account flows |
 | Load tests | NOT_DONE | planned | Add k6/Locust |
 | Container scan | NOT_DONE | planned | Add CI scan |
@@ -149,7 +151,7 @@ Current state:
 | Production HTTP redirect rejection | DONE | tests | None |
 | No plaintext invitation tokens | DONE | token hash route and body-based accept payloads | None |
 | No browser Keycloak admin credentials | DONE | architecture/UI | Keep invariant |
-| Admin MFA | BLOCKED | Keycloak config required | Enable and verify |
+| Admin MFA | PARTIAL | Keycloak deployed | Enable and verify admin MFA policy |
 | Audit event coverage | DONE | schema, audit log lists and log_audit_event calls | None |
 | Secret rotation | NOT_DONE | planned | Implement |
 | CSRF protection | PARTIAL | Auth.js defaults for auth routes | Review mutation endpoints |
@@ -167,17 +169,17 @@ Current state:
 
 ## Release Verdict
 
-Current verdict: **UAT-ready foundation, not production-complete**.
+Current verdict: **Live UAT-ready IAM platform, not final production signed off**.
 
 Required before production claim:
 
-1. Live Netlify admin login through Keycloak verified.
-2. Live Hugging Face API verifies real Keycloak tokens.
-3. Managed PostgreSQL migrations verified.
-4. Redis and Keycloak readiness verified in production.
-5. Keycloak admin operations implemented.
-6. Client provisioning, secret rotation and service accounts implemented.
-7. Audit events written for all security-sensitive mutations.
-8. E2E tests pass for login, onboarding, invitations, roles, suspension and machine clients.
-9. Security, dependency and container scans pass.
-10. Backup/restore and incident runbooks are validated.
+1. Full browser Netlify admin login and callback E2E is automated and passing.
+2. `/api/v1/me` is verified with a fresh browser-issued Keycloak access token.
+3. SMTP/email verification and invitation delivery are verified.
+4. Admin MFA policy is enabled and tested.
+5. Client provisioning, secret rotation and service accounts are tested end to end.
+6. Audit events are verified for all security-sensitive mutations.
+7. E2E tests pass for login, onboarding, invitations, roles, suspension and machine clients.
+8. Security, dependency and container scans pass.
+9. Backup/restore and incident runbooks are validated.
+10. Load/latency tests meet the accepted SLO.

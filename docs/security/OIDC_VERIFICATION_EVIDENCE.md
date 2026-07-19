@@ -2,6 +2,8 @@
 
 Status: `PARTIAL`
 
+Last updated: 2026-07-20
+
 ## Local Evidence
 
 The backend validates signed JWTs with issuer, audience and expiration checks.
@@ -28,7 +30,36 @@ Covered locally:
 
 ## Required Live Evidence Before DONE
 
-Live Keycloak verification has not yet been completed in this workspace.
+Live OIDC discovery and protected-resource behavior have been verified. Full live browser-issued token verification remains pending because automated browser login was not available in this workspace and Keycloak direct password grant is intentionally disabled for the admin client.
+
+Live evidence captured:
+
+```text
+Issuer:
+https://iitdeveloper-keycloak.hf.space/realms/iitd
+
+Discovery URL:
+https://iitdeveloper-keycloak.hf.space/realms/iitd/.well-known/openid-configuration
+
+Discovery result:
+200
+
+JWKS URL:
+https://iitdeveloper-keycloak.hf.space/realms/iitd/protocol/openid-connect/certs
+
+IAM readiness:
+https://iitdeveloper-iam.hf.space/health/ready
+200
+api/postgres/redis/keycloak = ok
+
+Protected API without token:
+https://iitdeveloper-iam.hf.space/api/v1/applications
+401 Authentication is required
+
+Direct password grant:
+disabled for client iitd-iam-admin
+error = unauthorized_client
+```
 
 Required live test:
 
@@ -54,4 +85,3 @@ Test command:
 Result:
 Timestamp:
 ```
-

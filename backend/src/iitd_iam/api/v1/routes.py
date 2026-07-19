@@ -580,8 +580,8 @@ async def create_environment(
             name=f"{app.name} ({payload.environment.value})",
             public_client=is_public,
             standard_flow_enabled=True,
-            redirect_uris=["http://localhost:3000/*"],
-            web_origins=["http://localhost:3000"]
+            redirect_uris=["http://localhost:3030/*"],
+            web_origins=["http://localhost:3030"]
         )
         await keycloak.create_client(kc_payload)
     except Exception as exc:

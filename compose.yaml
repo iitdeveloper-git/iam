@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: iam
       POSTGRES_USER: iam
-      POSTGRES_PASSWORD: ${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${IAM_POSTGRES_PASSWORD:-iam-local-password}
     ports:
       - "5432:5432"
     volumes:
@@ -20,7 +20,7 @@ services:
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
-      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak-local-password}
     volumes:
       - keycloak-postgres:/var/lib/postgresql/data
     healthcheck:
@@ -46,15 +46,18 @@ services:
     image: quay.io/keycloak/keycloak:25.0.6
     command: [ "start-dev", "--import-realm" ]
     environment:
-      KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:?set KEYCLOAK_ADMIN}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}
-      KC_HOSTNAME: http://localhost:8080
-      KC_HOSTNAME_STRICT: "false"
-      KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
+      KC_DB: ${KC_DB:-postgres}
+      KC_DB_URL: ${KC_DB_URL:-jdbc:postgresql://keycloak-db:5432/keycloak}
+      KC_DB_USERNAME: ${KC_DB_USERNAME:-keycloak}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:-keycloak-local-password}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KC_HTTP_ENABLED: ${KC_HTTP_ENABLED:-true}
+      KC_HTTP_PORT: ${KC_HTTP_PORT:-8080}
+      KC_HOSTNAME: ${KC_HOSTNAME:-http://localhost:8080}
+      KC_HOSTNAME_STRICT: ${KC_HOSTNAME_STRICT:-false}
+      KC_HOSTNAME_STRICT_BACKCHANNEL: ${KC_HOSTNAME_STRICT_BACKCHANNEL:-false}
+      KC_PROXY_HEADERS: ${KC_PROXY_HEADERS:-xforwarded}
     ports:
       - "8080:8080"
     volumes:
@@ -69,17 +72,17 @@ services:
       context: .
       dockerfile: Dockerfile.api
     environment:
-      IAM_DATABASE_URL: postgresql://iam:${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}@postgres:5432/iam
-      IAM_REDIS_URL: redis://redis:6379/0
-      IAM_KEYCLOAK_BASE_URL: http://keycloak:8080
-      IAM_ENVIRONMENT: local
-      IAM_OIDC_ISSUER: http://localhost:8080/realms/iitd
-      IAM_OIDC_JWKS_URL: http://keycloak:8080/realms/iitd/protocol/openid-connect/certs
-      IAM_OIDC_AUDIENCE: account
-      IAM_OIDC_ALLOWED_AUTHORIZED_PARTIES: '["iitd-iam-admin"]'
-      IAM_CORS_ORIGINS: '["http://localhost:3030"]'
-      IAM_COOKIE_SECURE: "false"
-      IAM_ALLOW_DEV_AUTH: "true"
+      IAM_DATABASE_URL: ${IAM_DATABASE_URL:-postgresql://iam:iam-local-password@postgres:5432/iam}
+      IAM_REDIS_URL: ${IAM_REDIS_URL:-redis://redis:6379/0}
+      IAM_KEYCLOAK_BASE_URL: ${IAM_KEYCLOAK_BASE_URL:-http://keycloak:8080}
+      IAM_ENVIRONMENT: ${IAM_ENVIRONMENT:-local}
+      IAM_OIDC_ISSUER: ${IAM_OIDC_ISSUER:-http://localhost:8080/realms/iitd}
+      IAM_OIDC_JWKS_URL: ${IAM_OIDC_JWKS_URL:-http://keycloak:8080/realms/iitd/protocol/openid-connect/certs}
+      IAM_OIDC_AUDIENCE: ${IAM_OIDC_AUDIENCE:-account}
+      IAM_OIDC_ALLOWED_AUTHORIZED_PARTIES: ${IAM_OIDC_ALLOWED_AUTHORIZED_PARTIES:-'["iitd-iam-admin"]'}
+      IAM_CORS_ORIGINS: ${IAM_CORS_ORIGINS:-'["http://localhost:3030"]'}
+      IAM_COOKIE_SECURE: ${IAM_COOKIE_SECURE:-false}
+      IAM_ALLOW_DEV_AUTH: ${IAM_ALLOW_DEV_AUTH:-true}
       PORT: "8000"
     ports:
       - "8000:8000"
@@ -90,6 +93,8 @@ services:
         condition: service_healthy
       keycloak:
         condition: service_started
+      migrate:
+        condition: service_completed_successfully
 
   migrate:
     build:
@@ -98,25 +103,24 @@ services:
     command: [ "alembic", "upgrade", "head" ]
     working_dir: /app
     environment:
-      IAM_DATABASE_URL: postgresql://iam:${IAM_POSTGRES_PASSWORD:?set IAM_POSTGRES_PASSWORD}@postgres:5432/iam
+      IAM_DATABASE_URL: ${IAM_DATABASE_URL:-postgresql://iam:iam-local-password@postgres:5432/iam}
     depends_on:
       postgres:
         condition: service_healthy
-    profiles: [ "tools" ]
 
   iam-admin:
     build:
       context: .
       dockerfile: Dockerfile.admin
     environment:
-      NEXT_PUBLIC_IAM_API_URL: http://localhost:8000/api/v1
+      NEXT_PUBLIC_IAM_API_URL: ${NEXT_PUBLIC_IAM_API_URL:-http://localhost:8000/api/v1}
       PORT: "3030"
       # NextAuth / Auth.js configuration
       AUTH_SECRET: ${AUTH_SECRET:-local-dev-secret-change-in-production}
-      AUTH_URL: http://localhost:3030
+      AUTH_URL: ${AUTH_URL:-http://localhost:3030}
       AUTH_IITD_ISSUER: ${AUTH_IITD_ISSUER:-http://keycloak:8080/realms/iitd}
       AUTH_IITD_PUBLIC_ISSUER: ${AUTH_IITD_PUBLIC_ISSUER:-http://localhost:8080/realms/iitd}
-      AUTH_IITD_CLIENT_ID: iitd-iam-admin
+      AUTH_IITD_CLIENT_ID: ${AUTH_IITD_CLIENT_ID:-iitd-iam-admin}
       # Public client — no secret needed
     ports:
       - "3030:3030"

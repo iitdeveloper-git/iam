@@ -1,10 +1,12 @@
 # Project State
 
-Current phase: UAT end-to-end completion.
+Last updated: 2026-07-20
 
-Current milestone: Greenfield V1 foundation created from master build prompt.
+Current phase: live UAT validation and production hardening.
 
-Current task: Continue UAT end-to-end completion on branch `uat`.
+Current milestone: IAM API, Keycloak and admin UI are deployed and live-health verified.
+
+Current task: complete browser E2E login/callback evidence and remaining production sign-off checks on `main`.
 
 Completed work:
 
@@ -24,6 +26,7 @@ Completed work:
 - Readiness now checks PostgreSQL, Redis and Keycloak discovery.
 - Netlify UI no longer depends on development headers and sends `Authorization: Bearer` tokens from a browser session.
 - Netlify UI now includes Auth.js OIDC sign-in route for Keycloak/IITD IAM.
+- Netlify UI caches/reuses Auth.js session access tokens and avoids repeated per-page auth/health calls.
 - Production configuration validation and tests added.
 - Keycloak admin client typed methods and tests added.
 - Consistency and reconciliation strategy documented.
@@ -31,32 +34,41 @@ Completed work:
 
 Incomplete work:
 
-- Full Keycloak admin operations.
-- Keycloak admin methods are not yet wired into all IAM business services/routes.
-- Live validation of automatic OIDC sign-in in admin UI against Netlify and Keycloak callback settings.
+- Full browser E2E login/callback automation on Netlify.
+- `/api/v1/me` verification with a fresh browser-issued access token.
+- SMTP/email verification and invitation delivery.
+- MFA policy enforcement verification.
 - Complete CRUD endpoints for every specified action.
 - Email/GNS integration.
 - Service-account secret manager integration.
 - Integration, E2E, load and security scan execution.
-- Staging and production deployment verification.
+- Load, backup/restore and security/container scan execution.
 
 Blockers:
 
-- No production DNS, TLS, SMTP/GNS credentials, cloud account, managed database, managed Redis or secret manager credentials are available.
+- Automated browser tooling is not currently installed in the workspace.
+- SMTP/GNS delivery, MFA policy, backup/restore and load-test evidence still need live execution.
 - Network/package installation may be unavailable in the local sandbox.
 
-Branch: `uat`.
+Branch: `main`.
 
-Last commit: `ea2f1ed Add OIDC bearer token integration bridge` before the current Auth.js commit.
+Latest relevant commits:
+
+- `33af248 fix: optimize frontend auth session reuse`
+- `853f765 fix: harden netlify oidc issuer config`
 
 Migrations: `backend/alembic/versions/0001_initial_schema.py`, `backend/alembic/versions/0002_role_assignment_uniqueness.py`.
 
-Running services: not started by this session.
+Running services:
 
-Test results: Python syntax compile passed; backend unit tests passed; Ruff passed; frontend typecheck passed; frontend production build passed with required sandbox permissions; npm audit reports zero vulnerabilities. Latest backend tests: 46 passed. Latest frontend build includes `ƒ /api/auth/[...nextauth]`.
+- IAM API: `https://iitdeveloper-iam.hf.space`
+- Keycloak: `https://iitdeveloper-keycloak.hf.space`
+- Admin UI: `https://iam.iitdeveloper.com`
 
-Security status: foundation controls implemented; production verification incomplete.
+Test results: frontend typecheck passed; frontend production build passed with required sandbox permissions; live IAM `/health/live` and `/health/ready` returned `200`; live Keycloak discovery returned `200`; protected API without token returned `401`.
 
-Deployment status: local Compose artifacts ready; staging/production blocked by external infrastructure.
+Security status: foundation controls implemented; live UAT checks healthy; final production verification incomplete.
 
-Next exact action: implement provisioning operation persistence/idempotency and wire Keycloak admin client into OAuth client lifecycle services.
+Deployment status: Hugging Face IAM API, Hugging Face Keycloak and Netlify/custom-domain admin UI are live.
+
+Next exact action: run browser E2E for login/callback/session reuse and then verify `/api/v1/me` with the browser-issued token.

@@ -10,12 +10,12 @@ Use the `IAM_` prefix for backend settings.
 IAM_ENVIRONMENT=production
 IAM_DATABASE_URL=postgresql://...
 IAM_REDIS_URL=redis://...
-IAM_KEYCLOAK_BASE_URL=https://auth.iitdeveloper.com
+IAM_KEYCLOAK_BASE_URL=https://iitdeveloper-keycloak.hf.space
 IAM_KEYCLOAK_REALM=iitd
 IAM_KEYCLOAK_ADMIN_CLIENT_ID=...
 IAM_KEYCLOAK_ADMIN_CLIENT_SECRET=...
-IAM_OIDC_ISSUER=https://auth.iitdeveloper.com/realms/iitd
-IAM_OIDC_JWKS_URL=https://auth.iitdeveloper.com/realms/iitd/protocol/openid-connect/certs
+IAM_OIDC_ISSUER=https://iitdeveloper-keycloak.hf.space/realms/iitd
+IAM_OIDC_JWKS_URL=https://iitdeveloper-keycloak.hf.space/realms/iitd/protocol/openid-connect/certs
 IAM_OIDC_AUDIENCE=iitd-iam-admin
 IAM_CORS_ORIGINS=["https://iam.iitdeveloper.com"]
 IAM_ALLOWED_REDIRECT_URLS=["https://iam.iitdeveloper.com/api/auth/callback/iitd-iam"]

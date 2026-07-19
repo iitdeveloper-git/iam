@@ -5,9 +5,9 @@ Use this pattern when a FastAPI service accepts user tokens from IITD IAM.
 ## Environment Variables
 
 ```bash
-IAM_ISSUER=https://auth.iitdeveloper.com/realms/iitd
+IAM_ISSUER=https://iitdeveloper-keycloak.hf.space/realms/iitd
 IAM_AUDIENCE=gns
-IAM_JWKS_URL=https://auth.iitdeveloper.com/realms/iitd/protocol/openid-connect/certs
+IAM_JWKS_URL=https://iitdeveloper-keycloak.hf.space/realms/iitd/protocol/openid-connect/certs
 ```
 
 ## Token Verification Example
@@ -19,7 +19,7 @@ import httpx
 from fastapi import Depends, FastAPI, Header, HTTPException
 from jose import jwt
 
-ISSUER = "https://auth.iitdeveloper.com/realms/iitd"
+ISSUER = "https://iitdeveloper-keycloak.hf.space/realms/iitd"
 AUDIENCE = "gns"
 JWKS_URL = f"{ISSUER}/protocol/openid-connect/certs"
 

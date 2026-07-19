@@ -1,5 +1,7 @@
 # Test Status
 
+Last updated: 2026-07-20
+
 Executed commands:
 
 ```bash
@@ -25,10 +27,32 @@ Actual result:
 - After production-config and Keycloak-admin-client work, `pytest backend/tests` passed: 26 passed.
 - After production-config and Keycloak-admin-client work, `ruff check backend/src backend/tests` passed.
 - After production-config work, `npm run typecheck`, `npm run build`, and `npm audit --audit-level=moderate` passed.
+- After frontend auth/session optimization, `npm run typecheck` passed.
+- After frontend auth/session optimization, `npm run build` passed with escalated sandbox permissions because Next 16 Turbopack workers require local process/port capabilities blocked by the default sandbox.
+- After Netlify OIDC issuer hardening, `npm run typecheck` passed.
+- After Netlify OIDC issuer hardening, `npm run build` passed with escalated sandbox permissions.
+
+Latest live HTTP checks:
+
+```text
+https://iitdeveloper-iam.hf.space/health/live                                  200
+https://iitdeveloper-iam.hf.space/health/ready                                 200
+https://iitdeveloper-keycloak.hf.space/realms/iitd/.well-known/openid-configuration 200
+https://iitdeveloper-iam.hf.space/api/v1/applications without token            401
+https://iam.iitdeveloper.com/login                                             200
+https://iam.iitdeveloper.com/applications without session                      redirects to /login
+```
+
+Observed auth behavior:
+
+- Keycloak direct password grant for `iitd-iam-admin` is disabled: `unauthorized_client`, `Client not allowed for direct access grants`. This is acceptable for production PKCE/OIDC browser login and prevents password-grant use.
+- Local production Auth.js CSRF-backed provider signin POST redirected to Keycloak authorization endpoint.
+- Plain `GET`/`HEAD` probes to Auth.js signin routes are not valid browser-equivalent signin tests and may return Auth.js error pages.
 
 Not executed:
 
 - Compose startup.
-- Alembic migration against live PostgreSQL.
-- Keycloak realm import verification.
-- Integration, E2E and load tests.
+- Full browser E2E login with callback on Netlify using automated browser tooling.
+- Keycloak admin-console SMTP/email delivery verification.
+- Load tests.
+- Container scan.

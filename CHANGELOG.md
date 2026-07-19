@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Built a complete URL-backed tab layout for `/applications/[id]` featuring Overview, Roles, Permissions, Users & Access, Invitations, and Audit.
 
 ### Changed
+- Updated live UAT documentation and agent status files to reflect current Hugging Face IAM API, Hugging Face Keycloak, Netlify admin console, readiness, protected API and client-integration evidence.
 - Replaced the always-visible admin API session panel on console pages with a protected shell-level auth gate and top-right profile/session menu.
 - Updated the frontend API client to bridge the signed-in Auth.js session token into IAM API requests automatically.
 - Updated frontend Auth.js configuration to support Keycloak public clients using PKCE when `AUTH_IITD_CLIENT_SECRET` is not configured.

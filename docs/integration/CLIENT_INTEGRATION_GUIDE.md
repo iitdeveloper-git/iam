@@ -81,7 +81,7 @@ Never reuse production secrets in development.
 For each environment, configure:
 
 - Application key, for example `gns`.
-- Issuer URL, for example `https://auth.iitdeveloper.com/realms/iitd`.
+- Issuer URL, for example `https://iitdeveloper-keycloak.hf.space/realms/iitd`.
 - Audience, for example `gns`.
 - Client ID, for example `gns-web`.
 - Client type: `public`, `confidential` or `machine`.
@@ -113,7 +113,29 @@ http://localhost:8080/realms/iitd/protocol/openid-connect/logout
 For production, replace the host with the production auth domain:
 
 ```text
-https://auth.iitdeveloper.com/realms/iitd
+https://iitdeveloper-keycloak.hf.space/realms/iitd
+```
+
+Current live IITD IAM endpoints:
+
+```text
+Admin console:
+https://iam.iitdeveloper.com
+
+IAM API:
+https://iitdeveloper-iam.hf.space
+
+IAM API base:
+https://iitdeveloper-iam.hf.space/api/v1
+
+Keycloak issuer:
+https://iitdeveloper-keycloak.hf.space/realms/iitd
+
+OIDC discovery:
+https://iitdeveloper-keycloak.hf.space/realms/iitd/.well-known/openid-configuration
+
+JWKS endpoint:
+https://iitdeveloper-keycloak.hf.space/realms/iitd/protocol/openid-connect/certs
 ```
 
 ## Required Token Validation
@@ -138,7 +160,7 @@ Typical token claims:
 
 ```json
 {
-  "iss": "https://auth.iitdeveloper.com/realms/iitd",
+  "iss": "https://iitdeveloper-keycloak.hf.space/realms/iitd",
   "sub": "immutable-keycloak-user-id",
   "aud": "gns",
   "azp": "gns-web",
@@ -229,33 +251,31 @@ Configure these Netlify environment variables:
 
 ```text
 AUTH_SECRET
-AUTH_URL
+AUTH_URL=https://iam.iitdeveloper.com
 AUTH_IITD_ISSUER
+AUTH_IITD_PUBLIC_ISSUER
 AUTH_IITD_CLIENT_ID
-AUTH_IITD_CLIENT_SECRET
-NEXT_PUBLIC_IAM_API_URL
+AUTH_IITD_CLIENT_SECRET     # only when the Keycloak client is confidential
+NEXT_PUBLIC_IAM_API_URL=https://iitdeveloper-iam.hf.space/api/v1
 ```
 
 Register this callback URI in Keycloak/IAM:
 
 ```text
-https://your-netlify-site.netlify.app/api/auth/callback/iitd-iam
+https://iam.iitdeveloper.com/api/auth/callback/iitd-iam
 ```
 
-Fallback deployable bridge mode:
+Admin console runtime flow:
 
-1. Configure `NEXT_PUBLIC_IAM_API_URL` in Netlify to the Hugging Face API base URL, for example:
+1. User opens the admin console.
+2. Unauthenticated protected pages redirect to `/login`.
+3. Auth.js starts OIDC Authorization Code Flow with PKCE.
+4. Keycloak authenticates the user.
+5. Auth.js stores the session.
+6. The frontend reads the session access token and calls IAM API with:
 
-   ```text
-   https://iitdeveloper-iam.hf.space/api/v1
-   ```
+```text
+Authorization: Bearer <access-token>
+```
 
-2. Obtain an OIDC access token from the configured Keycloak realm.
-3. Paste the access token into the admin console session panel.
-4. The UI sends API calls with:
-
-   ```text
-   Authorization: Bearer <access-token>
-   ```
-
-This fallback is useful for UAT while OIDC client secrets and callback URLs are being configured.
+Do not reuse the admin-console client ID for product applications. Create one OIDC client per consuming app and environment.

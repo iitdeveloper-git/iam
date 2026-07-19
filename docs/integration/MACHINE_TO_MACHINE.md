@@ -15,7 +15,7 @@ The service receives:
 
 ```bash
 curl -s \
-  -X POST "https://auth.iitdeveloper.com/realms/iitd/protocol/openid-connect/token" \
+  -X POST "https://iitdeveloper-keycloak.hf.space/realms/iitd/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=client_credentials" \
   -d "client_id=gns-worker" \
@@ -31,7 +31,7 @@ import httpx
 
 def fetch_service_token():
     response = httpx.post(
-        "https://auth.iitdeveloper.com/realms/iitd/protocol/openid-connect/token",
+        "https://iitdeveloper-keycloak.hf.space/realms/iitd/protocol/openid-connect/token",
         data={
             "grant_type": "client_credentials",
             "client_id": "gns-worker",
