@@ -54,11 +54,17 @@ const navGroups = [
 
 type AuthSession = {
   accessToken?: string;
+  expiresAt?: number;
   user?: {
     email?: string | null;
     name?: string | null;
   };
 };
+
+function hasFreshAccessToken(session: AuthSession | null) {
+  if (!session?.accessToken) return false;
+  return typeof session.expiresAt !== "number" || session.expiresAt > Math.floor(Date.now() / 1000) + 30;
+}
 
 function startIamSignIn() {
   if (typeof window === "undefined") return;
@@ -337,7 +343,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/auth/session", { cache: "no-store" });
         const session = response.ok ? ((await response.json()) as AuthSession) : null;
         if (!alive) return;
-        if (!session?.accessToken) {
+        if (!hasFreshAccessToken(session)) {
           clearStoredAccessToken();
           startIamSignIn();
           return;

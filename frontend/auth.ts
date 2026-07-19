@@ -1,5 +1,11 @@
 import NextAuth, { customFetch } from "next-auth";
 
+const TOKEN_EXPIRY_SKEW_SECONDS = 30;
+
+function isExpired(expiresAt?: unknown) {
+  return typeof expiresAt === "number" && expiresAt <= Math.floor(Date.now() / 1000) + TOKEN_EXPIRY_SKEW_SECONDS;
+}
+
 function customFetchInterceptor(
   input: RequestInfo | URL,
   init?: RequestInit
@@ -65,12 +71,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.idToken = account.id_token;
         token.expiresAt = account.expires_at;
       }
+      if (isExpired(token.expiresAt)) {
+        delete token.accessToken;
+        delete token.idToken;
+        delete token.expiresAt;
+      }
       return token;
     },
     session({ session, token }) {
-      session.accessToken = typeof token.accessToken === "string" ? token.accessToken : undefined;
-      session.idToken = typeof token.idToken === "string" ? token.idToken : undefined;
-      session.expiresAt = typeof token.expiresAt === "number" ? token.expiresAt : undefined;
+      if (!isExpired(token.expiresAt)) {
+        session.accessToken = typeof token.accessToken === "string" ? token.accessToken : undefined;
+        session.idToken = typeof token.idToken === "string" ? token.idToken : undefined;
+        session.expiresAt = typeof token.expiresAt === "number" ? token.expiresAt : undefined;
+      }
       return session;
     }
   }

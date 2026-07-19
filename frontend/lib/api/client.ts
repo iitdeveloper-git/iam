@@ -28,9 +28,14 @@ function redirectToLogin(error = "authentication_failed") {
 
 type AuthSession = {
   accessToken?: string;
+  expiresAt?: number;
 };
 
 let sessionTokenPromise: Promise<string | null> | null = null;
+
+function isExpired(expiresAt?: number) {
+  return typeof expiresAt === "number" && expiresAt <= Math.floor(Date.now() / 1000) + 30;
+}
 
 async function getSessionAccessToken(force = false) {
   if (typeof window === "undefined") {
@@ -43,7 +48,10 @@ async function getSessionAccessToken(force = false) {
     .then(async (response) => {
       if (!response.ok) return null;
       const session = (await response.json()) as AuthSession;
-      if (!session.accessToken) return null;
+      if (!session.accessToken || isExpired(session.expiresAt)) {
+        clearStoredAccessToken();
+        return null;
+      }
       setStoredAccessToken(session.accessToken);
       return session.accessToken;
     })
@@ -55,6 +63,10 @@ async function request<T>(path: string, token?: string | null, options?: Request
   let accessToken = token ?? getStoredAccessToken();
   if (!accessToken) {
     accessToken = await getSessionAccessToken();
+  }
+  if (!accessToken) {
+    redirectToLogin("authentication_required");
+    throw new Error("Authentication is required.");
   }
   const headers: Record<string, string> = {};
   if (accessToken) {
