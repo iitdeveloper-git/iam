@@ -75,7 +75,10 @@ function hasConsoleAdminRole(roles: string[]) {
 function startIamSignIn() {
   if (typeof window === "undefined") return;
   const callbackUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-  window.location.href = `/api/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl || "/")}`;
+  const loginUrl = new URL("/login", window.location.origin);
+  loginUrl.searchParams.set("error", "authentication_required");
+  loginUrl.searchParams.set("callbackUrl", callbackUrl || "/");
+  window.location.href = loginUrl.toString();
 }
 
 function useProfile() {
