@@ -230,6 +230,27 @@ export function MaintenanceState({
       <div className="relative w-full max-w-xl overflow-hidden rounded-md border border-slate-800 bg-slate-950/80 p-8 text-center shadow-2xl">
         <div className="absolute left-1/2 top-0 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-3xl" />
         <div className="relative">
+          <div className="mb-7 flex flex-col items-center text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-md border border-slate-700 bg-slate-900 text-brand shadow-lg shadow-brand/10">
+              <svg
+                aria-hidden="true"
+                className="h-9 w-9"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                <path d="m9 12 2 2 4-5" />
+              </svg>
+            </div>
+            <div className="mt-4 text-3xl font-extrabold tracking-normal text-white">
+              IITD <span className="bg-gradient-to-r from-emerald-400 to-indigo-400 bg-clip-text text-transparent">IAM</span>
+            </div>
+            <div className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Admin Console</div>
+          </div>
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-300">
             <AlertTriangle className="h-8 w-8 animate-pulse" />
           </div>
