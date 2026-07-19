@@ -6,8 +6,9 @@ const PUBLIC_PATHS = ["/login", "/api/auth"];
 export default auth((request) => {
   const { pathname, search } = request.nextUrl;
   const isPublicPath = PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+  const hasAccessToken = typeof request.auth?.accessToken === "string" && request.auth.accessToken.length > 0;
 
-  if (isPublicPath || request.auth) {
+  if (isPublicPath || hasAccessToken) {
     return NextResponse.next();
   }
 
