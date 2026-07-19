@@ -1,3 +1,5 @@
+import time
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
@@ -11,6 +13,9 @@ from iitd_iam.config import get_settings
 from iitd_iam.database import SessionLocal
 from iitd_iam.errors import ApiError, api_error_handler
 from iitd_iam.middleware.request_id import request_id_middleware
+
+KEYCLOAK_HEALTH_CACHE_TTL_SECONDS = 60
+_keycloak_health_cache = {"checked_at": 0.0, "status": "unknown"}
 
 
 def create_app() -> FastAPI:
@@ -63,14 +68,18 @@ def create_app() -> FastAPI:
             checks["redis"] = "ok"
         except Exception:
             checks["redis"] = "failed"
-        try:
-            discovery = f"{str(settings.oidc_issuer).rstrip('/')}/.well-known/openid-configuration"
-            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
-                response = await client.get(discovery)
-                response.raise_for_status()
-            checks["keycloak"] = "ok"
-        except Exception:
-            checks["keycloak"] = "failed"
+        now = time.monotonic()
+        if now - _keycloak_health_cache["checked_at"] < KEYCLOAK_HEALTH_CACHE_TTL_SECONDS:
+            checks["keycloak"] = _keycloak_health_cache["status"]
+        else:
+            try:
+                discovery = f"{str(settings.oidc_issuer).rstrip('/')}/.well-known/openid-configuration"
+                async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                    response = await client.get(discovery)
+                checks["keycloak"] = "ok" if 200 <= response.status_code < 400 or response.status_code == 429 else "failed"
+            except Exception:
+                checks["keycloak"] = "failed"
+            _keycloak_health_cache.update({"checked_at": now, "status": checks["keycloak"]})
 
         status = "ready" if all(value == "ok" for value in checks.values()) else "degraded"
         return {"status": status, "checks": checks}
