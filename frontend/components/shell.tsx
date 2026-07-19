@@ -78,7 +78,7 @@ function startIamSignIn() {
   const loginUrl = new URL("/login", window.location.origin);
   loginUrl.searchParams.set("error", "authentication_required");
   loginUrl.searchParams.set("callbackUrl", callbackUrl || "/");
-  window.location.href = loginUrl.toString();
+  window.location.replace(loginUrl.toString());
 }
 
 function useProfile() {
@@ -426,17 +426,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }
 
   if (!authReady) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f6f8fa] px-6 text-center text-sm text-slate-600">
-        <div>
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-brand/10 text-brand">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
-          <div className="text-base font-semibold text-ink">Redirecting to IAM sign in</div>
-          <div className="mt-1">Authentication is required to access the admin console.</div>
-        </div>
-      </div>
-    );
+    return <div className="min-h-screen bg-[#f6f8fa]" />;
   }
 
   return (
