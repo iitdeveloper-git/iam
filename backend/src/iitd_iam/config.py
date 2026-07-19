@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     environment: Literal["local", "test", "staging", "production"] = "local"
     api_base_path: str = "/api/v1"
     database_url: PostgresDsn = Field(..., description="PostgreSQL DSN; SQLite is not supported")
+    database_pool_size: int = 3
+    database_max_overflow: int = 0
+    database_pool_recycle_seconds: int = 300
     redis_url: RedisDsn = "redis://redis:6379/0"
     keycloak_base_url: AnyHttpUrl = "http://keycloak:8080"
     keycloak_realm: str = "iitd"
