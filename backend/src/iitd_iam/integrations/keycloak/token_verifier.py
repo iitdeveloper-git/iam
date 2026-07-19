@@ -142,7 +142,22 @@ class TokenVerifier:
         else:
             audiences = set()
 
-        if expected_audience not in audiences:
+        allowed_parties = set(
+            getattr(
+                self.settings,
+                "oidc_allowed_authorized_parties",
+                [],
+            )
+            or []
+        )
+        authorized_party = claims.get("azp")
+        keycloak_account_token = (
+            "account" in audiences
+            and isinstance(authorized_party, str)
+            and authorized_party in allowed_parties
+        )
+
+        if expected_audience not in audiences and not keycloak_account_token:
             raise TokenVerificationError(
                 "Token was not issued for the IITD IAM API"
             )
@@ -183,7 +198,7 @@ class TokenVerifier:
             "verify_nbf": True,
             "verify_iat": True,
             "verify_iss": True,
-            "verify_aud": True,
+            "verify_aud": False,
             "verify_at_hash": False,
             "require_exp": True,
             "require_iat": True,
@@ -197,7 +212,6 @@ class TokenVerifier:
                 token,
                 jwks,
                 algorithms=self._allowed_algorithms(),
-                audience=str(self.settings.oidc_audience),
                 issuer=str(self.settings.oidc_issuer).rstrip("/"),
                 options=decode_options,
             )

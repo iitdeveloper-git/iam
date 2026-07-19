@@ -77,6 +77,24 @@ async def test_rejects_wrong_audience(settings, keypair):
         await TokenVerifier(settings, public_pem).verify(token)
 
 
+async def test_accepts_keycloak_account_audience_with_allowed_authorized_party(settings, keypair):
+    private_pem, public_pem = keypair
+    token = make_token(private_pem, aud="account", azp="iitd-iam-admin")
+
+    claims = await TokenVerifier(settings, public_pem).verify(token)
+
+    assert claims["aud"] == "account"
+    assert claims["azp"] == "iitd-iam-admin"
+
+
+async def test_rejects_keycloak_account_audience_with_untrusted_authorized_party(settings, keypair):
+    private_pem, public_pem = keypair
+    token = make_token(private_pem, aud="account", azp="unknown-client")
+
+    with pytest.raises(Exception):
+        await TokenVerifier(settings, public_pem).verify(token)
+
+
 async def test_rejects_expired_token(settings, keypair):
     private_pem, public_pem = keypair
     now = datetime.now(UTC)
@@ -89,4 +107,3 @@ async def test_rejects_expired_token(settings, keypair):
 
     with pytest.raises(Exception):
         await TokenVerifier(settings, public_pem).verify(token)
-
