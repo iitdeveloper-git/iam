@@ -64,8 +64,7 @@ def create_app() -> FastAPI:
         except Exception:
             checks["redis"] = "failed"
         try:
-            issuer_path = settings.oidc_issuer.path or ""
-            discovery = f"{str(settings.keycloak_base_url).rstrip('/')}{issuer_path}/.well-known/openid-configuration"
+            discovery = f"{str(settings.oidc_issuer).rstrip('/')}/.well-known/openid-configuration"
             async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
                 response = await client.get(discovery)
                 response.raise_for_status()
