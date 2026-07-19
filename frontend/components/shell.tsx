@@ -26,7 +26,8 @@ import {
   UsersRound,
   X
 } from "lucide-react";
-import { clearStoredAccessToken, getMe } from "@/lib/api/client";
+import { MaintenanceState } from "@/components/ui";
+import { clearStoredAccessToken, getMe, getSystemHealth } from "@/lib/api/client";
 
 const navGroups = [
   {
@@ -315,6 +316,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authReady, setAuthReady] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("iitd_iam_sidebar_collapsed");
@@ -325,6 +327,13 @@ export function Shell({ children }: { children: React.ReactNode }) {
     let alive = true;
     async function requireSession() {
       try {
+        const health = await getSystemHealth();
+        if (!alive) return;
+        if (health.status !== "ready") {
+          setMaintenanceMessage(`Current service status: ${health.status}`);
+          return;
+        }
+
         const response = await fetch("/api/auth/session", { cache: "no-store" });
         const session = response.ok ? ((await response.json()) as AuthSession) : null;
         if (!alive) return;
@@ -336,8 +345,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         setAuthReady(true);
       } catch {
         if (!alive) return;
-        clearStoredAccessToken();
-        startIamSignIn();
+        setMaintenanceMessage("The IAM backend is not reachable right now.");
       }
     }
 
@@ -353,6 +361,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
       return !next;
     });
   };
+
+  if (maintenanceMessage) {
+    return <MaintenanceState detail={<span>{maintenanceMessage}</span>} />;
+  }
 
   if (!authReady) {
     return (

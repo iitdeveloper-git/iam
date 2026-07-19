@@ -15,6 +15,17 @@ export function clearStoredAccessToken() {
   window.sessionStorage.removeItem("iitd_iam_access_token");
 }
 
+function redirectToLogin(error = "authentication_failed") {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const callbackUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  const loginUrl = new URL("/login", window.location.origin);
+  loginUrl.searchParams.set("error", error);
+  loginUrl.searchParams.set("callbackUrl", callbackUrl || "/");
+  window.location.href = loginUrl.toString();
+}
+
 type AuthSession = {
   accessToken?: string;
 };
@@ -66,11 +77,17 @@ async function request<T>(path: string, token?: string | null, options?: Request
   }
   if (!response.ok) {
     let message = `API request failed: ${response.status}`;
+    let errorCode: string | undefined;
     try {
       const body = await response.json();
+      errorCode = body?.error?.code;
       message = body?.error?.message ?? message;
     } catch {
       // Keep the status-based message when the response is not JSON.
+    }
+    if (response.status === 401) {
+      clearStoredAccessToken();
+      redirectToLogin(errorCode === "AUTHENTICATION_REQUIRED" ? "authentication_required" : "authentication_failed");
     }
     throw new Error(message);
   }

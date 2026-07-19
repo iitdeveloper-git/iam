@@ -2,20 +2,57 @@
 
 import { signIn } from "next-auth/react";
 import { Shield, LogIn, Cpu, Globe } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { MaintenanceState } from "@/components/ui";
+import { getSystemHealth } from "@/lib/api/client";
 
-export default function LoginPage() {
+function LoginContent() {
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
+
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const errorMessage = useMemo(() => {
+    const error = searchParams.get("error");
+    if (!error) return null;
+    if (error === "authentication_required") return "Authentication is required before opening the IAM admin console.";
+    if (error === "authentication_failed") return "Authentication could not be verified. Please sign in again.";
+    if (error === "OAuthCallback") return "The identity provider callback could not be completed. Please restart sign in.";
+    return "Sign in was not completed. Please try again.";
+  }, [searchParams]);
+
+  useEffect(() => {
+    let alive = true;
+    getSystemHealth()
+      .then((health) => {
+        if (!alive) return;
+        if (health.status !== "ready") {
+          setMaintenanceMessage(`Current service status: ${health.status}`);
+        }
+      })
+      .catch(() => {
+        if (!alive) return;
+        setMaintenanceMessage("The IAM backend is not reachable right now.");
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const handleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signIn("iitd-iam", { callbackUrl: "/" });
+      await signIn("iitd-iam", { callbackUrl });
     } catch (error) {
       console.error("Sign in failed:", error);
       setIsLoading(false);
     }
   };
+
+  if (maintenanceMessage) {
+    return <MaintenanceState detail={<span>{maintenanceMessage}</span>} />;
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-[#0b0f19] text-slate-100 overflow-hidden font-sans select-none">
@@ -72,6 +109,12 @@ export default function LoginPage() {
               Sign in to manage application registration, permissions, and security policies.
             </p>
 
+            {errorMessage ? (
+              <div className="mb-5 rounded-md border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+                {errorMessage}
+              </div>
+            ) : null}
+
             {/* Action Button */}
             <button
               onClick={handleSignIn}
@@ -120,5 +163,13 @@ export default function LoginPage() {
 
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<MaintenanceState title="Preparing IAM sign in" description="Loading the secure sign-in experience." />}>
+      <LoginContent />
+    </Suspense>
   );
 }

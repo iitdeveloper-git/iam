@@ -216,6 +216,36 @@ export function LoadingState({ label = "Loading" }: { label?: string }) {
   );
 }
 
+export function MaintenanceState({
+  title = "IAM is under maintenance",
+  description = "One or more required identity services are temporarily unavailable. Access to the admin console is paused until service health is restored.",
+  detail
+}: {
+  title?: string;
+  description?: string;
+  detail?: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#0b0f19] px-6 py-12 text-slate-100">
+      <div className="relative w-full max-w-xl overflow-hidden rounded-md border border-slate-800 bg-slate-950/80 p-8 text-center shadow-2xl">
+        <div className="absolute left-1/2 top-0 h-48 w-48 -translate-x-1/2 -translate-y-1/2 rounded-full bg-brand/20 blur-3xl" />
+        <div className="relative">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-300">
+            <AlertTriangle className="h-8 w-8 animate-pulse" />
+          </div>
+          <h1 className="mt-6 text-2xl font-semibold text-white">{title}</h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-300">{description}</p>
+          <div className="mx-auto mt-6 flex w-full max-w-xs items-center gap-2 rounded-full border border-slate-800 bg-slate-900 px-3 py-2 text-xs text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin text-brand" />
+            Monitoring service recovery
+          </div>
+          {detail ? <div className="mt-5 rounded-md border border-slate-800 bg-slate-900/70 px-4 py-3 text-left text-xs text-slate-300">{detail}</div> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function HealthIcon({ status }: { status: string }) {
   if (status === "ok") return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
   if (status === "failed") return <XCircle className="h-4 w-4 text-rose-600" />;
