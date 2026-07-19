@@ -52,6 +52,8 @@ const navGroups = [
   }
 ];
 
+const CONSOLE_ADMIN_ROLES = new Set(["super_admin", "platform_admin"]);
+
 type AuthSession = {
   accessToken?: string;
   expiresAt?: number;
@@ -64,6 +66,10 @@ type AuthSession = {
 function hasFreshAccessToken(session: AuthSession | null) {
   if (!session?.accessToken) return false;
   return typeof session.expiresAt !== "number" || session.expiresAt > Math.floor(Date.now() / 1000) + 30;
+}
+
+function hasConsoleAdminRole(roles: string[]) {
+  return roles.some((role) => CONSOLE_ADMIN_ROLES.has(role));
 }
 
 function startIamSignIn() {
@@ -323,6 +329,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
+  const [accessDeniedRoles, setAccessDeniedRoles] = useState<string[] | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("iitd_iam_sidebar_collapsed");
@@ -343,9 +350,17 @@ export function Shell({ children }: { children: React.ReactNode }) {
         const response = await fetch("/api/auth/session", { cache: "no-store" });
         const session = response.ok ? ((await response.json()) as AuthSession) : null;
         if (!alive) return;
-        if (!hasFreshAccessToken(session)) {
+        const accessToken = session?.accessToken;
+        const tokenIsExpired = typeof session?.expiresAt === "number" && session.expiresAt <= Math.floor(Date.now() / 1000) + 30;
+        if (!accessToken || tokenIsExpired) {
           clearStoredAccessToken();
           startIamSignIn();
+          return;
+        }
+        const profile = await getMe(accessToken);
+        if (!alive) return;
+        if (!hasConsoleAdminRole(profile.roles)) {
+          setAccessDeniedRoles(profile.roles);
           return;
         }
         setAuthReady(true);
@@ -370,6 +385,41 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
   if (maintenanceMessage) {
     return <MaintenanceState detail={<span>{maintenanceMessage}</span>} />;
+  }
+
+  if (accessDeniedRoles) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0b0f19] px-6 py-12 text-slate-100">
+        <div className="w-full max-w-xl rounded-md border border-slate-800 bg-slate-950/85 p-8 text-center shadow-2xl">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-300">
+            <Shield className="h-8 w-8" />
+          </div>
+          <div className="mt-5 text-3xl font-extrabold tracking-normal text-white">
+            IITD <span className="bg-gradient-to-r from-emerald-400 to-indigo-400 bg-clip-text text-transparent">IAM</span>
+          </div>
+          <h1 className="mt-8 text-2xl font-semibold text-white">Admin access is required</h1>
+          <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-400">
+            Your sign-in is valid, but this account is not assigned an IAM console administrator role.
+          </p>
+          <div className="mt-5 rounded-md border border-slate-800 bg-slate-900/70 px-4 py-3 text-left text-sm text-slate-300">
+            Current roles: <span className="font-semibold text-white">{accessDeniedRoles.length ? accessDeniedRoles.join(", ") : "none"}</span>
+          </div>
+          <div className="mt-4 rounded-md border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-left text-sm text-amber-100">
+            Assign <span className="font-semibold">super_admin</span> or <span className="font-semibold">platform_admin</span> to this user in the Keycloak <span className="font-semibold">iitd</span> realm, then sign in again.
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              clearStoredAccessToken();
+              void nextAuthSignOut({ callbackUrl: "/login?error=authentication_required" });
+            }}
+            className="mt-6 inline-flex h-11 items-center justify-center rounded-md bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-dark"
+          >
+            Sign in with another account
+          </button>
+        </div>
+      </div>
+    );
   }
 
   if (!authReady) {
