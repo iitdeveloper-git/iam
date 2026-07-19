@@ -1,4 +1,25 @@
 const API_BASE = process.env.NEXT_PUBLIC_IAM_API_URL ?? "http://localhost:8000/api/v1";
+const SESSION_REFRESH_SKEW_SECONDS = 30;
+const SESSION_CACHE_TTL_MS = 30_000;
+const PROFILE_CACHE_TTL_MS = 60_000;
+const HEALTH_CACHE_TTL_MS = 60_000;
+
+export type AuthProfile = {
+  email: string | null;
+  roles: string[];
+  subject: string;
+  issuer: string;
+};
+
+export type SystemHealth = {
+  status: string;
+  checks: {
+    api: string;
+    postgres: string;
+    redis: string;
+    keycloak: string;
+  };
+};
 
 export function getStoredAccessToken() {
   if (typeof window === "undefined") {
@@ -8,10 +29,20 @@ export function getStoredAccessToken() {
 }
 
 export function setStoredAccessToken(token: string) {
+  if (typeof window === "undefined") {
+    return;
+  }
   window.sessionStorage.setItem("iitd_iam_access_token", token.trim());
 }
 
 export function clearStoredAccessToken() {
+  cachedSessionToken = null;
+  sessionTokenPromise = null;
+  profileCache = null;
+  profilePromise = null;
+  if (typeof window === "undefined") {
+    return;
+  }
   window.sessionStorage.removeItem("iitd_iam_access_token");
 }
 
@@ -23,7 +54,7 @@ function redirectToLogin(error = "authentication_failed") {
   const loginUrl = new URL("/login", window.location.origin);
   loginUrl.searchParams.set("error", error);
   loginUrl.searchParams.set("callbackUrl", callbackUrl || "/");
-  window.location.href = loginUrl.toString();
+  window.location.replace(loginUrl.toString());
 }
 
 type AuthSession = {
@@ -32,14 +63,27 @@ type AuthSession = {
 };
 
 let sessionTokenPromise: Promise<string | null> | null = null;
+let cachedSessionToken: { token: string; expiresAt?: number; cachedAt: number } | null = null;
+let profilePromise: { token: string; promise: Promise<AuthProfile> } | null = null;
+let profileCache: { token: string; value: AuthProfile; cachedAt: number } | null = null;
+let healthPromise: Promise<SystemHealth> | null = null;
+let healthCache: { value: SystemHealth; cachedAt: number } | null = null;
 
 function isExpired(expiresAt?: number) {
-  return typeof expiresAt === "number" && expiresAt <= Math.floor(Date.now() / 1000) + 30;
+  return typeof expiresAt === "number" && expiresAt <= Math.floor(Date.now() / 1000) + SESSION_REFRESH_SKEW_SECONDS;
 }
 
-async function getSessionAccessToken(force = false) {
+export async function getSessionAccessToken(force = false) {
   if (typeof window === "undefined") {
     return null;
+  }
+  if (
+    !force &&
+    cachedSessionToken &&
+    Date.now() - cachedSessionToken.cachedAt < SESSION_CACHE_TTL_MS &&
+    !isExpired(cachedSessionToken.expiresAt)
+  ) {
+    return cachedSessionToken.token;
   }
   if (!force && sessionTokenPromise) {
     return sessionTokenPromise;
@@ -53,9 +97,17 @@ async function getSessionAccessToken(force = false) {
         return null;
       }
       setStoredAccessToken(session.accessToken);
+      cachedSessionToken = {
+        token: session.accessToken,
+        expiresAt: session.expiresAt,
+        cachedAt: Date.now()
+      };
       return session.accessToken;
     })
-    .catch(() => null);
+    .catch(() => null)
+    .finally(() => {
+      sessionTokenPromise = null;
+    });
   return sessionTokenPromise;
 }
 
@@ -136,26 +188,62 @@ export async function getApplications(token?: string | null) {
 }
 
 export async function getMe(token?: string | null) {
-  return request<{ email: string | null; roles: string[]; subject: string; issuer: string }>("/me", token);
+  return request<AuthProfile>("/me", token);
 }
 
-export type SystemHealth = {
-  status: string;
-  checks: {
-    api: string;
-    postgres: string;
-    redis: string;
-    keycloak: string;
-  };
-};
-
-export async function getSystemHealth(): Promise<SystemHealth> {
-  const readyUrl = API_BASE.replace("/api/v1", "/health/ready");
-  const response = await fetch(readyUrl, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`Health check failed: ${response.status}`);
+export async function getCurrentPrincipal(token?: string | null, force = false) {
+  const accessToken = token ?? getStoredAccessToken() ?? (await getSessionAccessToken());
+  if (!accessToken) {
+    redirectToLogin("authentication_required");
+    throw new Error("Authentication is required.");
   }
-  return response.json();
+  if (
+    !force &&
+    profileCache?.token === accessToken &&
+    Date.now() - profileCache.cachedAt < PROFILE_CACHE_TTL_MS
+  ) {
+    return profileCache.value;
+  }
+  if (!force && profilePromise?.token === accessToken) {
+    return profilePromise.promise;
+  }
+  const promise = getMe(accessToken)
+    .then((profile) => {
+      profileCache = {
+        token: accessToken,
+        value: profile,
+        cachedAt: Date.now()
+      };
+      return profile;
+    })
+    .finally(() => {
+      profilePromise = null;
+    });
+  profilePromise = { token: accessToken, promise };
+  return promise;
+}
+
+export async function getSystemHealth(force = false): Promise<SystemHealth> {
+  if (!force && healthCache && Date.now() - healthCache.cachedAt < HEALTH_CACHE_TTL_MS) {
+    return healthCache.value;
+  }
+  if (!force && healthPromise) {
+    return healthPromise;
+  }
+  const readyUrl = API_BASE.replace("/api/v1", "/health/ready");
+  healthPromise = fetch(readyUrl, { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) {
+        throw new Error(`Health check failed: ${response.status}`);
+      }
+      const health = (await response.json()) as SystemHealth;
+      healthCache = { value: health, cachedAt: Date.now() };
+      return health;
+    })
+    .finally(() => {
+      healthPromise = null;
+    });
+  return healthPromise;
 }
 
 export type AuditEvent = {

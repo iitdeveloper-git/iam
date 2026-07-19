@@ -27,7 +27,7 @@ import {
   X
 } from "lucide-react";
 import { MaintenanceState } from "@/components/ui";
-import { clearStoredAccessToken, getMe, getSystemHealth } from "@/lib/api/client";
+import { clearStoredAccessToken, getCurrentPrincipal, getSessionAccessToken, getSystemHealth, type AuthProfile } from "@/lib/api/client";
 
 const navGroups = [
   {
@@ -54,20 +54,6 @@ const navGroups = [
 
 const CONSOLE_ADMIN_ROLES = new Set(["super_admin", "platform_admin"]);
 
-type AuthSession = {
-  accessToken?: string;
-  expiresAt?: number;
-  user?: {
-    email?: string | null;
-    name?: string | null;
-  };
-};
-
-function hasFreshAccessToken(session: AuthSession | null) {
-  if (!session?.accessToken) return false;
-  return typeof session.expiresAt !== "number" || session.expiresAt > Math.floor(Date.now() / 1000) + 30;
-}
-
 function hasConsoleAdminRole(roles: string[]) {
   return roles.some((role) => CONSOLE_ADMIN_ROLES.has(role));
 }
@@ -79,31 +65,6 @@ function startIamSignIn() {
   loginUrl.searchParams.set("error", "authentication_required");
   loginUrl.searchParams.set("callbackUrl", callbackUrl || "/");
   window.location.replace(loginUrl.toString());
-}
-
-function useProfile() {
-  const [email, setEmail] = useState<string | null>(null);
-  const [roles, setRoles] = useState<string[]>([]);
-
-  useEffect(() => {
-    let alive = true;
-    getMe()
-      .then((profile) => {
-        if (!alive) return;
-        setEmail(profile.email);
-        setRoles(profile.roles);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setEmail(null);
-        setRoles([]);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
-
-  return { email, roles };
 }
 
 function initials(email: string | null) {
@@ -202,14 +163,17 @@ function Sidebar({
 function TopNavigation({
   collapsed,
   onToggleSidebar,
-  onOpenMobile
+  onOpenMobile,
+  profile
 }: {
   collapsed: boolean;
   onToggleSidebar: () => void;
   onOpenMobile: () => void;
+  profile: AuthProfile | null;
 }) {
   const pathname = usePathname();
-  const { email, roles } = useProfile();
+  const email = profile?.email ?? null;
+  const roles = profile?.roles ?? [];
   const [profileOpen, setProfileOpen] = useState(false);
   const breadcrumbs = useMemo(() => {
     const parts = pathname.split("/").filter(Boolean);
@@ -333,6 +297,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState<string | null>(null);
   const [accessDeniedRoles, setAccessDeniedRoles] = useState<string[] | null>(null);
+  const [profile, setProfile] = useState<AuthProfile | null>(null);
 
   useEffect(() => {
     const stored = window.localStorage.getItem("iitd_iam_sidebar_collapsed");
@@ -342,6 +307,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let alive = true;
     async function requireSession() {
+      let healthVerified = false;
       try {
         const health = await getSystemHealth();
         if (!alive) return;
@@ -349,27 +315,31 @@ export function Shell({ children }: { children: React.ReactNode }) {
           setMaintenanceMessage(`Current service status: ${health.status}`);
           return;
         }
+        healthVerified = true;
 
-        const response = await fetch("/api/auth/session", { cache: "no-store" });
-        const session = response.ok ? ((await response.json()) as AuthSession) : null;
+        const accessToken = await getSessionAccessToken();
         if (!alive) return;
-        const accessToken = session?.accessToken;
-        const tokenIsExpired = typeof session?.expiresAt === "number" && session.expiresAt <= Math.floor(Date.now() / 1000) + 30;
-        if (!accessToken || tokenIsExpired) {
+        if (!accessToken) {
           clearStoredAccessToken();
           startIamSignIn();
           return;
         }
-        const profile = await getMe(accessToken);
+        const nextProfile = await getCurrentPrincipal(accessToken);
         if (!alive) return;
-        if (!hasConsoleAdminRole(profile.roles)) {
-          setAccessDeniedRoles(profile.roles);
+        if (!hasConsoleAdminRole(nextProfile.roles)) {
+          setAccessDeniedRoles(nextProfile.roles);
           return;
         }
+        setProfile(nextProfile);
         setAuthReady(true);
       } catch {
         if (!alive) return;
-        setMaintenanceMessage("The IAM backend is not reachable right now.");
+        if (!healthVerified) {
+          setMaintenanceMessage("The IAM backend is not reachable right now.");
+          return;
+        }
+        clearStoredAccessToken();
+        startIamSignIn();
       }
     }
 
@@ -448,7 +418,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       ) : null}
 
       <div className={`min-h-screen transition-[padding] duration-200 ${collapsed ? "md:pl-[76px]" : "md:pl-[268px]"}`}>
-        <TopNavigation collapsed={collapsed} onToggleSidebar={toggleSidebar} onOpenMobile={() => setMobileOpen(true)} />
+        <TopNavigation collapsed={collapsed} onToggleSidebar={toggleSidebar} onOpenMobile={() => setMobileOpen(true)} profile={profile} />
         <main className="mx-auto max-w-[1520px] px-4 py-6 md:px-6 lg:px-8">{children}</main>
       </div>
     </div>
